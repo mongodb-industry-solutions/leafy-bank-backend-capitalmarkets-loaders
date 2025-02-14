@@ -1,0 +1,98 @@
+_MONGOSH
+
+use agentic_capital_markets
+switched to db agentic_capital_markets
+db.createCollection(
+   "yfinanceTickers",
+   {
+      timeseries: {
+         timeField: "timestamp",
+         metaField: "symbol",
+         granularity: "minutes"
+      },
+      expireAfterSeconds: 86400
+   }
+)
+{ ok: 1 }
+db.yfinanceTickers.createIndex( { "symbol": 1 }, { "timestamp": 1 } )
+symbol_1
+var now = new Date();
+var events = [
+    {
+        "symbol": "SP500-USD",
+        "price": 6049.240234,
+        "timestamp": new Date(now.getTime() + 1000)
+    },
+    {
+        "symbol": "SP500-USD",
+        "price": 6086.370117,
+        "timestamp": new Date(now.getTime() + 2000)
+    },
+    {
+        "symbol": "SP500-USD",
+        "price": 6118.709961,
+        "timestamp": new Date(now.getTime() + 3000)
+    }
+]
+db.yfinanceTickers.insertMany(events)
+{
+  acknowledged: true,
+  insertedIds: {
+    '0': ObjectId('67aca69d752d42d7324d7335'),
+    '1': ObjectId('67aca69d752d42d7324d7336'),
+    '2': ObjectId('67aca69d752d42d7324d7337')
+  }
+}
+show collections
+_default
+yfinanceTickers                [time-series]
+system.buckets.yfinanceTickers
+system.views
+db.yfinanceTickers.countDocuments()
+3
+db.system.buckets.yfinanceTickers.countDocuments()
+1
+db.system.buckets.yfinanceTickers.findOne()
+{
+  _id: ObjectId('67ac9b5076c92207313b7448'),
+  control: {
+    version: 2,
+    min: {
+      price: 6049.240234,
+      timestamp: 2025-02-12T13:00:00.000Z,
+      _id: ObjectId('67aca69d752d42d7324d7335')
+    },
+    max: {
+      price: 6118.709961,
+      timestamp: 2025-02-12T13:47:58.874Z,
+      _id: ObjectId('67aca69d752d42d7324d7337')
+    },
+    count: 3
+  },
+  meta: 'SP500-USD',
+  data: {
+    price: Binary.createFromBase64('AQBjtfl/PaG3QNGOkfapGwAAAA7yVRgYAAAAAA==', 7),
+    timestamp: Binary.createFromBase64('CQBKlmr6lAEAAIANfQAAAAAAAAA=', 7),
+    _id: Binary.createFromBase64('BwBnrKaddS1C1zJNczWALQAAAAAAAAAA', 7)
+  }
+}
+db.yfinanceTickers.find()
+{
+  timestamp: 2025-02-12T13:47:56.874Z,
+  symbol: 'SP500-USD',
+  price: 6049.240234,
+  _id: ObjectId('67aca69d752d42d7324d7335')
+}
+{
+  timestamp: 2025-02-12T13:47:57.874Z,
+  symbol: 'SP500-USD',
+  price: 6086.370117,
+  _id: ObjectId('67aca69d752d42d7324d7336')
+}
+{
+  timestamp: 2025-02-12T13:47:58.874Z,
+  symbol: 'SP500-USD',
+  price: 6118.709961,
+  _id: ObjectId('67aca69d752d42d7324d7337')
+}
+Atlas atlas-133bp7-shard-0 [primary] agentic_capital_markets

@@ -1,77 +1,130 @@
-# Demo Template: Python Backend only
+# Agentic AI - Capital Markets
 
-This repository provides a template for creating a Python backend service. The backend is built using FastAPI, a modern Python web framework that allows you to build APIs quickly and efficiently.
-For the dependency management, we use Poetry, a Python packaging and dependency management tool that simplifies the process of managing dependencies in your projects.
+This repository hosts the backend for the **Agentic AI - Investment Fund Risk Management** demo. It showcases an AI-powered risk management solution for investment fund managers, integrating **AI Agents with a human-in-the-loop approach**. The AI Agent continuously monitors market risks in real-time and suggests risk mitigation strategies, such as asset rebalancing, based on macroeconomic changes, sentiment analysis, and market volatility. **MongoDB Atlas Vector Search** plays a key role in analyzing historical patterns to generate risk mitigation recommendations.
 
-## Table of Contents
+## What is Agentic AI in Capital Markets?
 
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-  - [Create a New Repository](#create-a-new-repository)
-  - [GitHub Desktop Setup](#github-desktop-setup)
-  - [Backend Setup](#backend-setup)
+Agentic AI refers to autonomous AI-powered systems that **continuously analyze market conditions, generate insights, and provide actionable recommendations**. In this use case, the AI Agent operates within an investment fund, ensuring risk-aware portfolio management by assessing:
 
-## Features
+- **Macroeconomic indicators** (GDP, inflation, unemployment rate)
+- **Market sentiment** (X/Twitter, news, social media)
+- **Market volatility** (VIX index)
+- **Investment mix risks** based on real-time market fluctuations
 
-- Python backend with a RESTful API powered by [FastAPI](https://fastapi.tiangolo.com/)
-- Dependency management with Poetry ([More info](https://python-poetry.org/docs/basic-usage/))
-- Easy setup and configuration
+## Where Does MongoDB Shine?
+
+MongoDB provides a **flexible and scalable data store** to handle the diverse datasets required for investment risk management:
+
+- **Atlas Vector Search** enables similarity searches on historical risk conditions to suggest optimal responses to new market events.
+- **Flexible Schema** accommodates structured and unstructured data, including financial reports, social media sentiment, and historical macroeconomic trends.
+- **Aggregation Pipelines** facilitate complex queries, allowing efficient calculation of risk exposure, asset allocation changes, and performance analytics.
+- **Time Series Collections** help efficiently store and retrieve market data over time.
+
+## High-Level Architecture
+
+[High level architecture diagram here use [google slides](https://docs.google.com/presentation/d/1vo8Y8mBrocJtzvZc_tkVHZTsVW_jGueyUl-BExmVUtI/edit#slide=id.g30c066974c7_0_3536)]
+
+## Key Features
+
+### AI-Driven Risk Management
+
+- Real-time monitoring of **macroeconomic conditions, asset performance, and sentiment data**.
+- AI-generated **risk mitigation recommendations** based on historical and real-time analysis.
+
+## Tech Stack
+
+- [MongoDB Atlas](https://www.mongodb.com/atlas/database) for the database
+- [FastAPI](https://fastapi.tiangolo.com/) for the backend framework
+- [Pydantic](https://pydantic-docs.helpmanual.io/) for documenting FastAPI Swagger schemas
+- [SlowApi](https://slowapi.readthedocs.io/en/latest/) for rate limiting
+- [Uvicorn](https://www.uvicorn.org/) for ASGI server
+- [Poetry](https://python-poetry.org/) for dependency management
+- [Docker](https://www.docker.com/) for containerization
 
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
 
-- Python 3.10 or higher (but less than 3.11)
-- Poetry (install via [Poetry's official documentation](https://python-poetry.org/docs/#installation))
+- **MongoDB Atlas** account (free tier is sufficient) - [Register Here](https://account.mongodb.com/account/register)
+- **Python 3.10 or higher**
+- **Poetry** (install via [Poetry's official documentation](https://python-poetry.org/docs/#installation))
 
-## Getting Started
+## Setup Instructions
 
-Follow these steps to set up the project locally.
+### Step 1: Set Up MongoDB Database and Collections
 
-### Create a New Repository
+1. Log in to **MongoDB Atlas** and create a database named `agentic_capital_markets`. Ensure the name is reflected in the environment variables.
+2. Create the following collections:
+   - `market_data`
+   - `macroeconomic_data`
+   - ...
 
-1. Navigate to the repository template on GitHub and click on **Use this template**.
-2. Create a new repository.
-3. **Do not** check the "Include all branches" option.
-4. Define a repository name following the naming convention: `<industry>-<project_name>-<highlighted_feature>`. For example, `fsi-leafybank-ai-personal-assistant` (use hyphens to separate words).
-   - The **industry** and **project name** are required; you can be creative with the highlighted feature.
-5. Provide a clear description for the repository, such as: "A repository template to easily create new demos by following the same structure."
-6. Set the visibility to **Internal**.
-7. Click **Create repository**.
+### Step 2: Add MongoDB User
 
-### GitHub Desktop Setup
+Follow [MongoDB's guide](https://www.mongodb.com/docs/atlas/security-add-mongodb-users/) to create a user with **readWrite** access to the `agentic_capital_markets` database.
 
-1. Install GitHub Desktop if you haven't already. You can download it from [GitHub Desktop's official website](https://desktop.github.com/).
-2. Open GitHub Desktop and sign in to your GitHub account.
-3. Clone the newly created repository:
-   - Click on **File** > **Clone Repository**.
-   - Select your repository from the list and click **Clone**.
-4. Create your first branch:
-   - In the GitHub Desktop interface, click on the **Current Branch** dropdown.
-   - Select **New Branch** and name it `feature/branch01`.
-   - Click **Create Branch**.
+## Configure Environment Variables
 
-### Backend Setup
+Create a `.env` file in the `/backend` directory with the following content:
 
-1. (Optional) Set your project description and author information in the `pyproject.toml` file:
-   ```toml
-   description = "Your Description"
-   authors = ["Your Name <you@example.com>"]
-2. Open the project in your preferred IDE (the standard for the team is Visual Studio Code).
-3. Open the Terminal within Visual Studio Code.
-4. Ensure you are in the root project directory where the `makefile` is located.
-5. Execute the following commands:
-  - Poetry start
-    ````bash
-    make poetry_start
-    ````
-  - Poetry install
-    ````bash
-    make poetry_install
-    ````
-6. Verify that the `.venv` folder has been generated within the `/backend` directory.
+```bash
+MONGODB_URI = "mongodb+srv://<REPLACE_USERNAME>:<REPLACE_PASSWORD>@<REPLACE_CLUSTER_NAME>.mongodb.net/"
+ORIGINS=http://localhost:3000
+```
 
-## DEMO README
+## Running the Backend
 
-<h1 style="color:red">REPLACE THE CONTENT OF THIS README WITH `README-demo.md` and DELETE THE `README-demo.md` FILE!!!!!!!!! </h1>
+### Virtual Environment Setup with Poetry
+
+1. Open a terminal in the project root directory.
+2. Run the following commands:
+   ```bash
+   make poetry_start
+   make poetry_install
+   ```
+3. Verify that the `.venv` folder has been generated within the `/backend` directory.
+
+### Start the Backend
+
+To start the backend service, run:
+
+```bash
+poetry run uvicorn main:app --host 0.0.0.0 --port 8004
+```
+
+> Default port is `8004`, modify the `--port` flag if needed.
+
+## Running with Docker
+
+Run the following command in the root directory:
+
+```bash
+make build
+```
+
+To remove the container and image:
+
+```bash
+make clean
+```
+
+## API Documentation
+
+You can access the API documentation by visiting the following URL:
+
+```
+http://localhost:<PORT_NUMBER>/docs
+```
+E.g. `http://localhost:8004/docs`
+
+> **_Note:_** Make sure to replace `<PORT_NUMBER>` with the port number you are using and ensure the backend is running.
+
+## Common errors
+
+- Check that you've created an `.env` file that contains the required environment variables.
+
+## Future tasks
+
+- [ ] Add tests
+- [ ] Evaluate SonarQube for code quality
+- [ ] Automate the deployment process using GitHub Actions or CodePipeline

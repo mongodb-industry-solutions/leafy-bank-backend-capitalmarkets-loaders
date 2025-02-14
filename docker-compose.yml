@@ -1,11 +1,11 @@
 services:
-  demoname-backend:
+  leafy-bank-backend-capitalmarkets:
     build:
       context: .
       no_cache: true
       dockerfile: Dockerfile.backend
-    image: imagename-backend:latest
+    image: leafy-bank-backend-capitalmarkets-image:latest
     ports:
       - "8000:8000"
     restart: always
-    container_name: demoname-backend
+    container_name: leafy-bank-backend-capitalmarkets-container
