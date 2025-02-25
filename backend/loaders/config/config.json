@@ -1,0 +1,6 @@
+{
+    "EQUITIES": "SPY QQQ EEM XLE",
+    "BONDS": "TLT LQD HYG",
+    "COMMODITIES": "GLD USO",
+    "MARKET_VOLATILITY": "^VIX"
+}
