@@ -42,10 +42,8 @@ class YFinanceTickersExtract(BaseExtract):
             for attempt in range(3):
                 try:
                     ticker_data = yf.Ticker(ticker).history(
-                        start=self.dt.strftime(
-                            "%Y-%m-%d") if self.dt else None,
-                        end=self.dt_end.strftime(
-                            "%Y-%m-%d") if self.dt_end else None,
+                        start=self.dt.strftime("%Y-%m-%d") if self.dt else None,
+                        end=self.dt_end.strftime("%Y-%m-%d") if self.dt_end else None,
                         interval=self.interval
                     )
                     # Retain only the specified columns
@@ -173,9 +171,9 @@ if __name__ == "__main__":
     logger.info("Commodities data:")
     for ticker, df in data["commodities"].items():
         logger.info(f"Ticker: {ticker}")
-        logger.info(f"\n{df.head()}")
+        logger.info(f"\n{df.tail()}")
 
     logger.info("Market Volatility data:")
     for ticker, df in data["market_volatility"].items():
         logger.info(f"Ticker: {ticker}")
-        logger.info(f"\n{df.head()}")
+        logger.info(f"\n{df.tail()}")
