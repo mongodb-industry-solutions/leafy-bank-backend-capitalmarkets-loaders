@@ -1,4 +1,6 @@
 import pandas as pd
+from datetime import datetime, time, timedelta
+import pytz
 from db.mongo_db import MongoDBConnector
 import logging
 
@@ -24,16 +26,16 @@ class YFinanceTickersLoad(MongoDBConnector):
         self.collection_name = collection_name
         logger.info("YFinanceTickersLoad initialized")
 
-    def delete_existing_data(self, symbol: str, date: pd.Timestamp):
+    def delete_existing_data(self, symbol: str, date: datetime):
         """
         Deletes existing data for the specified symbol and date.
 
         Parameters:
             - symbol (str): The symbol for which to delete data.
-            - date (pd.Timestamp): The date for which to delete data.
+            - date (datetime): The date for which to delete data.
         """
         start_of_day = date.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_of_day = date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        end_of_day = start_of_day + timedelta(days=1)
         query = {
             "symbol": symbol,
             "timestamp": {
@@ -47,6 +49,7 @@ class YFinanceTickersLoad(MongoDBConnector):
     def insert_market_data(self, df: pd.DataFrame) -> dict:
         """
         Inserts the transformed DataFrame into the MongoDB time-series collection.
+        Adds a new attribute date_load_iso_utc with the current UTC timestamp.
 
         Parameters:
             - df (pd.DataFrame): The transformed DataFrame containing market data.
@@ -55,12 +58,10 @@ class YFinanceTickersLoad(MongoDBConnector):
             - dict: MongoDB insert result.
         """
         try:
-            # Confirm timestamp is aware and in UTC
+            # Ensure timestamp is aware and in UTC
             if df['timestamp'].dt.tz is None:
-                # If timestamp is naive, localize to UTC
                 df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize('UTC')
             else:
-                # If timestamp is aware, convert to UTC
                 df['timestamp'] = df['timestamp'].dt.tz_convert('UTC')
 
             # Delete existing data for the same symbol and date
@@ -69,75 +70,140 @@ class YFinanceTickersLoad(MongoDBConnector):
                 date = df['timestamp'].iloc[0]
                 self.delete_existing_data(symbol, date)
 
-            # Convert timestamp to Python datetime object (ensuring stored as ISODate)
+            # Convert timestamp to Python datetime object (for ISODate storage)
             df['timestamp'] = df['timestamp'].apply(lambda x: x.to_pydatetime())
 
-            # Convert DataFrame to list of dictionaries
+            # Add the new field date_load_iso_utc with current UTC timestamp
+            current_utc = datetime.now(pytz.UTC)
+            df['date_load_iso_utc'] = current_utc.strftime("%Y%m%d%H%M%S")
+
+            # Remove the _id field from each document to avoid duplication
             records = df.to_dict(orient="records")
+            for record in records:
+                if '_id' in record:
+                    del record['_id']
 
             # Insert data into the collection
             result = self.db[self.collection_name].insert_many(records)
-
             return {"inserted_count": len(result.inserted_ids)}
         except Exception as e:
             logger.error(f"Error inserting data into collection {self.collection_name}: {e}")
             return {"inserted_count": 0}
 
-    def load(self, data: dict):
+    def recover_last_day_data(self, symbol: str, start_date: str) -> pd.DataFrame:
         """
-        Load data into MongoDB for each ticker.
+        Recovers the last available data from MongoDB for the given symbol.
+        Adjusts the date part of each document's timestamp to the provided start_date 
+        (format "YYYYMMDD") while preserving the time.
+        Also adds the date_load_iso_utc field.
+
+        Parameters:
+            - symbol (str): The symbol for which to recover data.
+            - start_date (str): The new date (format "YYYYMMDD") to assign.
+        
+        Returns:
+            pd.DataFrame: A DataFrame with the recovered and adjusted data.
+        """
+        # Find the most recent document
+        doc = self.db[self.collection_name].find_one({"symbol": symbol}, sort=[("timestamp", -1)])
+        if not doc:
+            logger.warning(f"No previous data found in DB for symbol: {symbol}")
+            return pd.DataFrame()
+        
+        last_date = doc["timestamp"].date()
+        # Retrieve all documents for that last date
+        start_last_day = datetime.combine(last_date, time(0, 0, 0, tzinfo=pytz.UTC))
+        end_last_day = start_last_day + timedelta(days=1)
+        cursor = self.db[self.collection_name].find({
+            "symbol": symbol,
+            "timestamp": {
+                "$gte": start_last_day,
+                "$lt": end_last_day
+            }
+        })
+        data = list(cursor)
+        if not data:
+            logger.warning(f"No documents found for symbol: {symbol} on last available day: {last_date}")
+            return pd.DataFrame()
+        df = pd.DataFrame(data)
+
+        # Adjust the date part to the provided start_date while preserving time
+        new_date = datetime.strptime(start_date, "%Y%m%d").date()
+        def adjust_timestamp(ts):
+            return datetime.combine(new_date, ts.time(), tzinfo=ts.tzinfo)
+        df['timestamp'] = df['timestamp'].apply(adjust_timestamp)
+
+        # Add the new field date_load_iso_utc with current UTC timestamp
+        current_utc = datetime.now(pytz.UTC)
+        df['date_load_iso_utc'] = current_utc.strftime("%Y%m%d%H%M%S")
+
+        # Remove the _id field from each document to avoid duplication
+        df = df.drop(columns=['_id'], errors='ignore')
+
+        logger.info(f"Recovered {len(df)} documents for symbol: {symbol} from last available day {last_date} adjusted to date {new_date}")
+        return df
+
+    def load(self, data: dict, start_date: str = None):
+        """
+        Load data into MongoDB for each ticker. If the DataFrame for a symbol
+        is empty and start_date is provided, attempt to recover the last available data
+        for that symbol and adjust its date to start_date.
 
         Args:
             data (dict): Dictionary of DataFrames for the specified tickers.
+            start_date (str, optional): Recovery date (format "YYYYMMDD") to use if data is empty.
         """
         for symbol, df in data.items():
-            if df.empty:
+            if df.empty and start_date:
+                logger.warning(f"No new data for symbol: {symbol}. Attempting recovery using start_date {start_date}.")
+                df = self.recover_last_day_data(symbol, start_date)
+                if df.empty:
+                    logger.error(f"Recovery failed for symbol: {symbol}.")
+                    continue
+            elif df.empty:
                 logger.warning(f"No data to insert for symbol: {symbol}")
                 continue
+
             logger.info(f"Inserting market data for symbol: {symbol}")
             try:
                 result = self.insert_market_data(df)
-                logger.info(f"Inserted {result['inserted_count']} documents for symbol: {symbol}")
+                start_date_formatted = datetime.strptime(start_date, "%Y%m%d").strftime("%Y-%m-%d")
+                logger.info(f"Inserted {result['inserted_count']} documents for symbol: {symbol} on date {start_date_formatted}")
             except Exception as e:
                 logger.error(f"Error inserting data for symbol {symbol}: {e}")
 
 if __name__ == "__main__":
-    # Example usage
-    sample_data = {
-        'AAPL': pd.DataFrame({
-            'timestamp': pd.date_range(start='2023-01-01', periods=5, freq='D', tz='UTC'),
-            'open': [150, 152, 153, 155, 157],
-            'high': [151, 153, 154, 156, 158],
-            'low': [149, 151, 152, 154, 156],
-            'close': [150, 152, 153, 155, 157],
-            'volume': [1000, 1100, 1200, 1300, 1400],
-            'symbol': ['AAPL'] * 5
-        }),
-        'MSFT': pd.DataFrame({
-            'timestamp': pd.date_range(start='2023-01-01', periods=5, freq='D', tz='UTC'),
-            'open': [250, 252, 253, 255, 257],
-            'high': [251, 253, 254, 256, 258],
-            'low': [249, 251, 252, 254, 256],
-            'close': [250, 252, 253, 255, 257],
-            'volume': [2000, 2100, 2200, 2300, 2400],
-            'symbol': ['MSFT'] * 5
-        })
-    }
+    # --- Pre-Insert Sample Data to Simulate Existing Records for Recovery ---
+    # Create a sample dataset for AAPL with multiple records for the same day (representative of real data)
+    aapl_existing = pd.DataFrame({
+        'timestamp': [
+            datetime(2025, 2, 18, 14, 30, tzinfo=pytz.UTC),
+            datetime(2025, 2, 18, 14, 31, tzinfo=pytz.UTC),
+            datetime(2025, 2, 18, 14, 32, tzinfo=pytz.UTC)
+        ],
+        'open': [76.69, 76.65, 76.57],
+        'high': [76.73, 76.65, 76.59],
+        'low': [76.65, 76.57, 76.57],
+        'close': [76.65, 76.58, 76.59],
+        'volume': [127518, 4532, 798],
+        'symbol': ['AAPL'] * 3
+    })
 
+    # First, insert existing data for AAPL normally.
+    initial_sample_data = {'AAPL': aapl_existing}
     yfinance_loader = YFinanceTickersLoad()
-    yfinance_loader.load(sample_data)
+    yfinance_loader.load(initial_sample_data, start_date="20250218")
 
+    # --- Simulate New Extraction with Empty Data for AAPL ---
+    # Now simulate no new data for AAPL (empty DataFrame) so that recovery is triggered.
+    new_sample_data = {
+        'AAPL': pd.DataFrame(columns=aapl_existing.columns)
+    }
+    yfinance_loader.load(new_sample_data, start_date="20250219")
+
+    # Query and pretty-print recovered AAPL data
     query = {"symbol": "AAPL"}
-    cursor = yfinance_loader.db[yfinance_loader.collection_name].find(query).sort("timestamp", -1).limit(5)
-
+    cursor = yfinance_loader.db[yfinance_loader.collection_name].find(query).sort("timestamp", -1).limit(10)
     from pprint import pprint
-    
-    # Pretty-print the results
     for document in cursor:
         pprint(document)
-    
-    # Cleanup: Delete all sample data
-    symbols = sample_data.keys()
-    for symbol in symbols:
-        delete_result = yfinance_loader.db[yfinance_loader.collection_name].delete_many({"symbol": symbol})
-        logger.info(f"Deleted {delete_result.deleted_count} documents for symbol: {symbol}")
