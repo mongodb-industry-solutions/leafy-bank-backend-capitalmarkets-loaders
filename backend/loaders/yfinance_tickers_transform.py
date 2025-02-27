@@ -17,7 +17,22 @@ class YFinanceTickersTransform:
         """
         logger.info("YFinanceTickersTransform initialized")
 
-    def transform_data(self, symbol: str, df: pd.DataFrame) -> pd.DataFrame:
+    def normalize_symbol(self, ticker: str) -> str:
+        """
+        Normalizes the given ticker symbol by removing special character.
+
+        Parameters:
+            - ticker (str): The ticker symbol to be normalized.
+        
+        Returns:
+            - str: Normalized ticker symbol.
+        """
+        # Remove leading '^' if present.
+        if ticker.startswith("^"):
+            ticker = ticker.lstrip("^")
+        return ticker
+
+    def transform(self, symbol: str, df: pd.DataFrame) -> pd.DataFrame:
         """
         Transforms the given DataFrame by performing the following operations:
             - Reset the index (Datetime) and rename it to 'timestamp'.
@@ -35,6 +50,9 @@ class YFinanceTickersTransform:
         """
         logger.info(f"Transforming data for symbol: {symbol}")
         try:
+            # Normalize the symbol
+            symbol = self.normalize_symbol(symbol)
+
             # Reset index and explicitly rename 'Datetime' to 'timestamp'
             df = df.reset_index().rename(columns={'Datetime': 'timestamp'})
 
@@ -43,7 +61,7 @@ class YFinanceTickersTransform:
 
             # Ensure timestamp is localized to the correct timezone if it’s naive (has no timezone)
             if df['timestamp'].dt.tz is None:
-                if symbol in ["^VIX", "VIX-USD"]:
+                if symbol in ["^VIX", "VIX-USD", "VIX"]:
                     timezone = pytz.timezone('US/Central')
                 else:
                     timezone = pytz.timezone('US/Eastern')
@@ -99,6 +117,6 @@ if __name__ == "__main__":
 
     transformer = YFinanceTickersTransform()
     for symbol, df in sample_data.items():
-        transformed_df = transformer.transform_data(symbol, df)
+        transformed_df = transformer.transform(symbol, df)
         logger.info(f"Transformed data for symbol: {symbol}")
         logger.info(f"\n{transformed_df.head()}")

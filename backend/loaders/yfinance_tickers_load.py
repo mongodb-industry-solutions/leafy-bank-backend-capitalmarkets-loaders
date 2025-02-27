@@ -3,6 +3,9 @@ from datetime import datetime, time, timedelta
 import pytz
 from db.mongo_db import MongoDBConnector
 import logging
+import os
+import json
+from bson import json_util
 
 # Configure logging
 logging.basicConfig(
@@ -45,6 +48,21 @@ class YFinanceTickersLoad(MongoDBConnector):
         }
         result = self.db[self.collection_name].delete_many(query)
         logger.info(f"Deleted {result.deleted_count} documents for symbol: {symbol} on date: {date.date()}")
+
+    def normalize_symbol(self, ticker: str) -> str:
+        """
+        Normalizes the given ticker symbol by removing special character.
+
+        Parameters:
+            - ticker (str): The ticker symbol to be normalized.
+        
+        Returns:
+            - str: Normalized ticker symbol.
+        """
+        # Remove leading '^' if present.
+        if ticker.startswith("^"):
+            ticker = ticker.lstrip("^")
+        return ticker
 
     def insert_market_data(self, df: pd.DataFrame) -> dict:
         """
@@ -143,32 +161,82 @@ class YFinanceTickersLoad(MongoDBConnector):
         logger.info(f"Recovered {len(df)} documents for symbol: {symbol} from last available day {last_date} adjusted to date {new_date}")
         return df
 
-    def load(self, data: dict, start_date: str = None):
+    def recover_day_data_from_backup(self, symbol: str, start_date: str) -> pd.DataFrame:
+        """
+        Recovers data from the backup JSON file for the given symbol.
+        Adjusts the date part of each document's timestamp to the provided start_date 
+        (format "YYYYMMDD") while preserving the time.
+        Also adds the date_load_iso_utc field.
+
+        Parameters:
+            - symbol (str): The symbol for which to recover data.
+            - start_date (str): The new date (format "YYYYMMDD") to assign.
+        
+        Returns:
+            pd.DataFrame: A DataFrame with the recovered and adjusted data.
+        """
+        backup_dir = "./backend/loaders/backup"
+        filename = os.path.join(backup_dir, f"bkp_day_data_{symbol}.json")
+        
+        if not os.path.exists(filename):
+            logger.warning(f"No backup file found for symbol: {symbol}")
+            return pd.DataFrame()
+
+        with open(filename, "r") as f:
+            data = json_util.loads(f.read())
+
+        if not data:
+            logger.warning(f"No data found in backup file for symbol: {symbol}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data)
+
+        # Adjust the date part to the provided start_date while preserving time
+        new_date = datetime.strptime(start_date, "%Y%m%d").date()
+        def adjust_timestamp(ts):
+            if isinstance(ts, dict) and '$date' in ts:
+                ts = pd.to_datetime(ts['$date'])
+            return datetime.combine(new_date, ts.time(), tzinfo=ts.tzinfo)
+        df['timestamp'] = df['timestamp'].apply(adjust_timestamp)
+
+        # Add the new field date_load_iso_utc with current UTC timestamp
+        current_utc = datetime.now(pytz.UTC)
+        df['date_load_iso_utc'] = current_utc.strftime("%Y%m%d%H%M%S")
+
+        logger.info(f"Recovered {len(df)} documents for symbol: {symbol} from backup file adjusted to date {new_date}")
+        return df
+
+    def load(self, data: dict, start_date: str):
         """
         Load data into MongoDB for each ticker. If the DataFrame for a symbol
         is empty and start_date is provided, attempt to recover the last available data
-        for that symbol and adjust its date to start_date.
+        for that symbol and adjust its date to start_date. If that fails, attempt to recover
+        from the backup JSON file.
 
         Args:
             data (dict): Dictionary of DataFrames for the specified tickers.
-            start_date (str, optional): Recovery date (format "YYYYMMDD") to use if data is empty.
+            start_date (str): Start date (format "YYYYMMDD").
         """
+        logger.info(f"Loading data using start_date {start_date}.")
         for symbol, df in data.items():
             if df.empty and start_date:
                 logger.warning(f"No new data for symbol: {symbol}. Attempting recovery using start_date {start_date}.")
                 df = self.recover_last_day_data(symbol, start_date)
                 if df.empty:
-                    logger.error(f"Recovery failed for symbol: {symbol}.")
-                    continue
+                    logger.warning(f"Recovery using start_date {start_date} failed for symbol: {symbol}. Attempting recovery from backup.")
+                    df = self.recover_day_data_from_backup(symbol, start_date)
+                    if df.empty:
+                        logger.error(f"Recovery from backup failed for symbol: {symbol}.")
+                        continue
             elif df.empty:
                 logger.warning(f"No data to insert for symbol: {symbol}")
                 continue
 
-            logger.info(f"Inserting market data for symbol: {symbol}")
+            logger.info(f"Inserting market data for symbol: {self.normalize_symbol(ticker=symbol)}")
             try:
                 result = self.insert_market_data(df)
                 start_date_formatted = datetime.strptime(start_date, "%Y%m%d").strftime("%Y-%m-%d")
-                logger.info(f"Inserted {result['inserted_count']} documents for symbol: {symbol} on date {start_date_formatted}")
+                logger.info(f"Inserted {result['inserted_count']} documents for symbol: {self.normalize_symbol(ticker=symbol)} on date {start_date_formatted}")
             except Exception as e:
                 logger.error(f"Error inserting data for symbol {symbol}: {e}")
 
@@ -189,17 +257,14 @@ if __name__ == "__main__":
         'symbol': ['AAPL'] * 3
     })
 
-    # First, insert existing data for AAPL normally.
-    initial_sample_data = {'AAPL': aapl_existing}
     yfinance_loader = YFinanceTickersLoad()
-    yfinance_loader.load(initial_sample_data, start_date="20250218")
 
     # --- Simulate New Extraction with Empty Data for AAPL ---
     # Now simulate no new data for AAPL (empty DataFrame) so that recovery is triggered.
     new_sample_data = {
         'AAPL': pd.DataFrame(columns=aapl_existing.columns)
     }
-    yfinance_loader.load(new_sample_data, start_date="20250219")
+    yfinance_loader.load(new_sample_data, start_date="20250226")
 
     # Query and pretty-print recovered AAPL data
     query = {"symbol": "AAPL"}
@@ -207,3 +272,8 @@ if __name__ == "__main__":
     from pprint import pprint
     for document in cursor:
         pprint(document)
+
+    # Cleanup: Delete all sample data from the collection
+    for symbol in ["AAPL"]:
+        delete_result = yfinance_loader.db[yfinance_loader.collection_name].delete_many({"symbol": symbol})
+        logger.info(f"Deleted {delete_result.deleted_count} documents for symbol: {symbol}")

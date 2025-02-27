@@ -95,14 +95,11 @@ if __name__ == "__main__":
         # Remove leading '^' if present.
         if ticker.startswith("^"):
             ticker = ticker.lstrip("^")
-        # Append '-USD' if not already present.
-        if not ticker.endswith("-USD"):
-            ticker = f"{ticker}-USD"
         return ticker
 
     # Normalize all symbols.
     symbols = [normalize_symbol(ticker) for ticker in tickers_list]
     
-    backup_date = "2025-02-21"  # Format: YYYY-MM-DD
+    backup_date = "2025-02-26"  # Format: YYYY-MM-DD
     backup_instance = YFinanceTickersBackup()
     backup_instance.backup_day_data(symbols, backup_date)
