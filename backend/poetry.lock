@@ -434,6 +434,20 @@ botocore = ">=1.33.2,<2.0a.0"
 crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
 
 [[package]]
+name = "scheduler"
+version = "0.8.8"
+description = "A simple in-process python scheduler library with asyncio, threading and timezone support."
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "scheduler-0.8.8-py3-none-any.whl", hash = "sha256:8f52ea6390757e4f42a8becbcb474e7744a3082ea5e1cdb0c972ea8b2c5d1891"},
+    {file = "scheduler-0.8.8.tar.gz", hash = "sha256:4575a12cd269e4e4896409836fd911560cb63fb7634360ee62aa2fa4ec495ffd"},
+]
+
+[package.dependencies]
+typeguard = ">=3.0.0"
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -471,6 +485,24 @@ anyio = ">=3.4.0,<5"
 
 [package.extras]
 full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7)", "pyyaml"]
+
+[[package]]
+name = "typeguard"
+version = "4.4.2"
+description = "Run-time type checker for Python"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "typeguard-4.4.2-py3-none-any.whl", hash = "sha256:77a78f11f09777aeae7fa08585f33b5f4ef0e7335af40005b0c422ed398ff48c"},
+    {file = "typeguard-4.4.2.tar.gz", hash = "sha256:a6f1065813e32ef365bc3b3f503af8a96f9dd4e0033a02c28c4a4983de8c6c49"},
+]
+
+[package.dependencies]
+typing_extensions = ">=4.10.0"
+
+[package.extras]
+doc = ["Sphinx (>=7)", "packaging", "sphinx-autodoc-typehints (>=1.2.0)", "sphinx-rtd-theme (>=1.3.0)"]
+test = ["coverage[toml] (>=7)", "mypy (>=1.2.0)", "pytest (>=7)"]
 
 [[package]]
 name = "typing-extensions"
@@ -522,4 +554,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.11"
-content-hash = "6a018d589738a0a6ba71717fc7d510aa0c6ab7c984509c390050f05dccb8cb67"
+content-hash = "ce9312fecb654a8c12cf0a0f1cd916b9a8b4fa93d556e9b85728bfd43affad89"
