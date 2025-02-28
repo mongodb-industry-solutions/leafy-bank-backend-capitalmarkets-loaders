@@ -14,6 +14,9 @@ uvicorn = "^0.32.0"
 boto3 = "^1.35.70"
 botocore = "^1.35.70"
 scheduler = "^0.8.8"
+tqdm = "^4.67.1"
+transformers = "^4.49.0"
+torch = "^2.6.0"
 
 
 [build-system]

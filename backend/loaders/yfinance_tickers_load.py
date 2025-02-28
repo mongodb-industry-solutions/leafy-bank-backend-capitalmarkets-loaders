@@ -4,7 +4,6 @@ import pytz
 from db.mongo_db import MongoDBConnector
 import logging
 import os
-import json
 from bson import json_util
 
 # Configure logging
@@ -15,7 +14,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class YFinanceTickersLoad(MongoDBConnector):
-    def __init__(self, uri=None, database_name: str = None, appname: str = None, collection_name: str = "yfinanceMarketData"):
+    def __init__(self, uri=None, database_name: str = None, appname: str = None, collection_name: str = os.getenv("YFINANCE_TIMESERIES_COLLECTION")):
         """
         Yahoo Finance tickers loader.
 
