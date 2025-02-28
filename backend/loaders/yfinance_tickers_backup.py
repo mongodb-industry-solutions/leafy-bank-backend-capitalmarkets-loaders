@@ -1,11 +1,15 @@
-import json
 from datetime import datetime, timedelta
 import pytz
 from db.mongo_db import MongoDBConnector
 from bson import json_util
 import logging
 from config.config_loader import ConfigLoader
+
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -15,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class YFinanceTickersBackup(MongoDBConnector):
-    def __init__(self, uri=None, database_name: str = None, appname: str = None, collection_name: str = "yfinanceMarketData"):
+    def __init__(self, uri=None, database_name: str = None, appname: str = None, collection_name: str = os.getenv("YFINANCE_TIMESERIES_COLLECTION")):
         """
         Backup utility class for retrieving and storing day-specific data.
         

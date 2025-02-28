@@ -1,4 +1,3 @@
-import pandas as pd
 import yfinance as yf
 from config.config_loader import ConfigLoader
 from base_extract import BaseExtract

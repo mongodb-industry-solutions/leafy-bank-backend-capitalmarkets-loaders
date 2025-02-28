@@ -6,6 +6,12 @@ from mongo_db import MongoDBConnector
 
 import logging
 
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -69,7 +75,7 @@ if __name__ == "__main__":
     # Example usage
     creator = TimeSeriesCollectionCreator()
     creator.create_timeseries_collection(
-        collection_name="yfinanceMarketData",
+        collection_name=os.getenv("YFINANCE_TIMESERIES_COLLECTION"),
         time_field="timestamp",
         meta_field="symbol",
         granularity="minutes"
