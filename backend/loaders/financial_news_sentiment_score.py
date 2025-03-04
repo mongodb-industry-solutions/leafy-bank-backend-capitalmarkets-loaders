@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from pymongo import UpdateOne
-from mongo_db import MongoDBConnector
+from db.mongo_db import MongoDBConnector
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from tqdm import tqdm
 
@@ -16,14 +16,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class SentimentScoreCreator(MongoDBConnector):
+class FinancialNewsSentimentScore(MongoDBConnector):
     def __init__(self, uri=None, database_name=None, appname=None, collection_name=None):
         """
-        Initializes the SentimentScoreCreator.
+        Initializes the FinancialNewsSentimentScore.
         """
         super().__init__(uri, database_name, appname)
         self.collection_name = collection_name or os.getenv("NEWS_COLLECTION", "financial_news")
-        logger.info("SentimentScoreCreator initialized using collection: %s", self.collection_name)
+        logger.info("FinancialNewsSentimentScore initialized using collection: %s", self.collection_name)
         # Load the FinBERT model and tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         self.model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
@@ -48,21 +48,17 @@ class SentimentScoreCreator(MongoDBConnector):
     def process_articles(self):
         """
         Processes financial news articles by:
-          - Dropping the existing sentiment_score attribute if it exists.
           - Computing the sentiment scores for the article_string.
           - Updating the document with the new sentiment_score attribute.
         """
         collection = self.db[self.collection_name]
-        articles = list(collection.find())
-        logger.info("Found %d articles.", len(articles))
+        # Filter to find articles that do not have sentiment_score attribute
+        articles = list(collection.find({"sentiment_score": {"$exists": False}}))
+        logger.info("Found %d unprocessed articles.", len(articles))
         
         if not articles:
             logger.info("No articles to process.")
             return
-
-        # Drop the existing sentiment_score attribute if it exists
-        collection.update_many({}, {"$unset": {"sentiment_score": ""}})
-        logger.info("Dropped existing sentiment_score attribute from all documents.")
 
         operations = []
         for article in tqdm(articles, desc="Processing articles"):
@@ -85,12 +81,6 @@ class SentimentScoreCreator(MongoDBConnector):
         else:
             logger.info("No articles were updated.")
 
-    def run(self):
-        """
-        Runs the sentiment score creation process.
-        """
-        self.process_articles()
-
 if __name__ == "__main__":
-    sentiment_creator = SentimentScoreCreator()
-    sentiment_creator.run()
+    sentiment_creator = FinancialNewsSentimentScore()
+    sentiment_creator.process_articles()

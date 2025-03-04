@@ -2,6 +2,7 @@ import re
 import requests
 from time import sleep
 from bs4 import BeautifulSoup
+from config.config_loader import ConfigLoader
 from db.mongo_db import MongoDBConnector
 from generic_scraper import GenericScraper
 from datetime import datetime, timezone
@@ -21,10 +22,10 @@ logging.basicConfig(
 )
 
 
-class NewsScraper(GenericScraper):
+class FinancialNewsScraper(GenericScraper):
     def __init__(self, collection_name, scrape_num_articles=1):
         """
-        Initialize the NewsScraper with necessary parameters.
+        Initialize the FinancialNewsScraper with necessary parameters.
 
         Args:
             collection_name: str
@@ -72,8 +73,8 @@ class NewsScraper(GenericScraper):
             'description': description,
             'link': clean_link,
             'synced': False,
-            'extraction_timestamp_utc': extraction_timestamp.isoformat(),
-            'ticker': ticker  # Add the ticker field
+            'extraction_timestamp_utc': extraction_timestamp,
+            'ticker': ticker
         }
 
     def scrape_articles(self, search_query):
@@ -119,14 +120,38 @@ class NewsScraper(GenericScraper):
             logging.info(f"Inserted {len(articles)} articles into MongoDB.")
 
         return articles
+    
+    def get_tickers(self):
+        """
+        Loads tickers from the configuration file and normalizes them.
+        """
+        logging.info("Loading tickers from configuration")
+        config_loader = ConfigLoader()
 
-    def scrape_all_tickers(self, tickers):
+        # Load configurations
+        equities = config_loader.get("EQUITIES").split()
+        bonds = config_loader.get("BONDS").split()
+        commodities = config_loader.get("COMMODITIES").split()
+        market_volatility = config_loader.get("MARKET_VOLATILITY").split()
+
+        # Combine all tickers into a single list
+        tickers = equities + bonds + commodities + market_volatility
+
+        # Normalize tickers (remove special characters like ^)
+        normalized_tickers = [ticker.replace("^", "") for ticker in tickers]
+
+        return normalized_tickers
+
+    def scrape_all_tickers(self):
         """
         Scrape news articles for a list of tickers.
 
         Args:
             tickers: list
         """
+        tickers = self.get_tickers()
+        logging.info(f"Scraping news for tickers: {tickers}")
+
         for ticker in tickers:
             logging.info(f"Scraping news for ticker: {ticker}")
             try:
@@ -139,16 +164,9 @@ class NewsScraper(GenericScraper):
 if __name__ == "__main__":
 
     # Initialize the scraper
-    scraper = NewsScraper(
+    scraper = FinancialNewsScraper(
         collection_name=os.getenv("NEWS_COLLECTION", "financial_news"),
-        scrape_num_articles=int(50)
+        scrape_num_articles=int(os.getenv("SCRAPE_NUM_ARTICLES", 1))
     )
 
-    # List of tickers to scrape
-    tickers = [
-        "SPY", "QQQ", "EEM", "XLE", "TLT", "LQD", "HYG", "GLD", "USO", "VIX"
-    ]
-
-    # Scrape all tickers
-    scraper.scrape_all_tickers(tickers)
-   
+    scraper.scrape_all_tickers()

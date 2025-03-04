@@ -73,8 +73,9 @@ class FinancialNewsEmbeddings(MongoDBConnector):
           - Updating the document with the new attributes.
         """
         collection = self.db[self.collection_name]
-        articles = list(collection.find())
-        logger.info("Found %d articles.", len(articles))
+        # Filter to find articles that do not have article_string and article_embedding attributes
+        articles = list(collection.find({"article_string": {"$exists": False}, "article_embedding": {"$exists": False}}))
+        logger.info("Found %d unprocessed articles.", len(articles))
         
         if not articles:
             logger.info("No articles to process.")
@@ -102,12 +103,6 @@ class FinancialNewsEmbeddings(MongoDBConnector):
         else:
             logger.info("No articles were updated.")
 
-    def run(self):
-        """
-        Runs the financial news embeddings process.
-        """
-        self.process_articles()
-
 if __name__ == "__main__":
     processor = FinancialNewsEmbeddings()
-    processor.run()
+    processor.process_articles()
