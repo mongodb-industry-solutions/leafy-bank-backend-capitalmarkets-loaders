@@ -103,6 +103,12 @@ class FinancialNewsEmbeddings(MongoDBConnector):
         else:
             logger.info("No articles were updated.")
 
+    def run(self):
+        """
+        Runs the financial news embeddings process.
+        """
+        self.process_articles()
+
 if __name__ == "__main__":
     processor = FinancialNewsEmbeddings()
-    processor.process_articles()
+    processor.run()

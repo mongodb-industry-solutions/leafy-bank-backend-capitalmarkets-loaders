@@ -1,5 +1,6 @@
 import os
 from pymongo import MongoClient
+from abc import abstractmethod
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -22,6 +23,13 @@ class MongoDBConnector:
 
     def __init__(self, uri=None, database_name=None, appname=None):
         """ Prevent reinitialization in the singleton. """
+        pass
+
+    @abstractmethod
+    def run(self, **kwargs):
+        """
+        Abstract method interface defining common run method.
+        """
         pass
 
     def get_collection(self, collection_name=None):

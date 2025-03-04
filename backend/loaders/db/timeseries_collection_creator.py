@@ -73,8 +73,8 @@ class TimeSeriesCollectionCreator(MongoDBConnector):
 
 if __name__ == "__main__":
     # Example usage
-    creator = TimeSeriesCollectionCreator()
-    creator.create_timeseries_collection(
+    market_data = TimeSeriesCollectionCreator()
+    market_data.create_timeseries_collection(
         collection_name=os.getenv("YFINANCE_TIMESERIES_COLLECTION"),
         time_field="timestamp",
         meta_field="symbol",

@@ -6,10 +6,12 @@ from datetime import datetime, timedelta, timezone
 from yfinance_tickers_extract import YFinanceTickersExtract
 from yfinance_tickers_transform import YFinanceTickersTransform
 from yfinance_tickers_load import YFinanceTickersLoad
+from yfinance_tickers_cleaner import YFinanceTickersCleaner
 
 from financial_news_scraper import FinancialNewsScraper
 from financial_news_embeddings import FinancialNewsEmbeddings
 from financial_news_sentiment_score import FinancialNewsSentimentScore
+from financial_news_cleaner import FinancialNewsCleaner
 
 from config.config_loader import ConfigLoader
 
@@ -54,11 +56,11 @@ class LoaderScheduler:
 
         logger.info(f"Extracting data from {start_date_str} to {end_date_str}")
 
-        # Extract data
+        # Extract Market Data
         extractor = YFinanceTickersExtract(start_date=start_date_str, end_date=end_date_str)
         extracted_data = extractor.extract()
 
-        # Transform data
+        # Transform Market Data
         transformer = YFinanceTickersTransform()
         transformed_data = {}
         for asset_type, data in extracted_data.items():
@@ -66,9 +68,13 @@ class LoaderScheduler:
             for symbol, df in data.items():
                 transformed_data[symbol] = transformer.transform(symbol=symbol, df=df)
 
-        # Load data
+        # Load Market Data
         loader = YFinanceTickersLoad()
         loader.load(transformed_data, start_date=start_date_str)
+
+        # Clean up Market Data older than 60 days
+        cleaner = YFinanceTickersCleaner()
+        cleaner.run()
 
         logger.info("ETL process completed")
 
@@ -81,17 +87,21 @@ class LoaderScheduler:
         # Scraper
         news_scraper = FinancialNewsScraper(
             collection_name=os.getenv("NEWS_COLLECTION", "financial_news"),
-            scrape_num_articles=int(os.getenv("SCRAPE_NUM_ARTICLES", 3))
+            scrape_num_articles=int(os.getenv("SCRAPE_NUM_ARTICLES", 1))
         )
         news_scraper.scrape_all_tickers()
 
         # Embeddings
         news_embeddings = FinancialNewsEmbeddings()
-        news_embeddings.process_articles()
+        news_embeddings.run()
 
         # Sentiment Score
         news_sentiment_creator = FinancialNewsSentimentScore()
-        news_sentiment_creator.process_articles()
+        news_sentiment_creator.run()
+
+        # Clean up articles older than 100 for each ticker
+        news_cleaner = FinancialNewsCleaner()
+        news_cleaner.run()
 
         logger.info("Financial News processing completed!")
 
@@ -99,12 +109,13 @@ class LoaderScheduler:
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
         """
-        test_time_etl = dt.time(hour=10, minute=5, tzinfo=timezone.utc)
-        test_time_news = dt.time(hour=10, minute=7, tzinfo=timezone.utc)
+        # test_time_etl = dt.time(hour=10, minute=5, tzinfo=timezone.utc)
+        test_time_news = dt.time(hour=11, minute=33, tzinfo=timezone.utc)
 
-        self.scheduler.once(trigger.Tuesday(test_time_etl), self.run_etl)
+        # self.scheduler.once(trigger.Tuesday(test_time_etl), self.run_etl)
         self.scheduler.once(trigger.Tuesday(test_time_news), self.run_financial_news_processing)
 
+        # Schedule Yahoo Finance tickers ETL process
         etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
         self.scheduler.weekly(trigger.Tuesday(etl_time), self.run_etl)
         self.scheduler.weekly(trigger.Wednesday(etl_time), self.run_etl)
@@ -113,7 +124,7 @@ class LoaderScheduler:
         self.scheduler.weekly(trigger.Saturday(etl_time), self.run_etl)
 
         # Schedule financial news processing
-        news_processing_time = dt.time(hour=4, minute=15, tzinfo=timezone.utc)
+        news_processing_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
         self.scheduler.weekly(trigger.Tuesday(news_processing_time), self.run_financial_news_processing)
         self.scheduler.weekly(trigger.Wednesday(news_processing_time), self.run_financial_news_processing)
         self.scheduler.weekly(trigger.Thursday(news_processing_time), self.run_financial_news_processing)
