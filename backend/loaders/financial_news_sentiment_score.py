@@ -81,6 +81,12 @@ class FinancialNewsSentimentScore(MongoDBConnector):
         else:
             logger.info("No articles were updated.")
 
+    def run(self):
+        """
+        Runs the financial news sentiment score process.
+        """
+        self.process_articles()
+
 if __name__ == "__main__":
     sentiment_creator = FinancialNewsSentimentScore()
-    sentiment_creator.process_articles()
+    sentiment_creator.run()
