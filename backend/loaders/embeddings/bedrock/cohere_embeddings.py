@@ -1,6 +1,6 @@
 import json
 
-from embeddings.bedrock.client import BedrockClient
+from loaders.embeddings.bedrock.client import BedrockClient
 from botocore.exceptions import ClientError
 
 from typing import Optional

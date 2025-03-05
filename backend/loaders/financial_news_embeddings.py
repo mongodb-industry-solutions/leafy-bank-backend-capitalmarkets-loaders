@@ -2,8 +2,8 @@ import os
 import logging
 from dotenv import load_dotenv
 from pymongo import UpdateOne
-from db.mongo_db import MongoDBConnector
-from embeddings.bedrock.cohere_embeddings import BedrockCohereEnglishEmbeddings
+from loaders.db.mongo_db import MongoDBConnector
+from loaders.embeddings.bedrock.cohere_embeddings import BedrockCohereEnglishEmbeddings
 from tqdm import tqdm
 
 # Configure logging

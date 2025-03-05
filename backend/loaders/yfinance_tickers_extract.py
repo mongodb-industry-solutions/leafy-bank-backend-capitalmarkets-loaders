@@ -1,6 +1,6 @@
 import yfinance as yf
-from config.config_loader import ConfigLoader
-from base_extract import BaseExtract
+from loaders.config.config_loader import ConfigLoader
+from loaders.base_extract import BaseExtract
 import logging
 import time
 

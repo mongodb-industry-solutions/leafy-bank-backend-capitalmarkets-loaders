@@ -1,7 +1,6 @@
 import pandas as pd
 from datetime import datetime
-import pytz
-from db.mongo_db import MongoDBConnector
+from loaders.db.mongo_db import MongoDBConnector
 import logging
 import os
 
@@ -74,6 +73,8 @@ class PyFredAPILoad(MongoDBConnector):
             # Insert data into the collection
             result = self.db[self.collection_name].insert_many(records)
             logger.info(f"Inserted {len(result.inserted_ids)} documents into collection {self.collection_name}")
+            for record in records:
+                logger.info(f"Inserted document with date: {record['date']} and value: {record['value']}")
             return {"inserted_count": len(result.inserted_ids)}
         except Exception as e:
             logger.error(f"Error inserting data into collection {self.collection_name}: {e}")
@@ -119,7 +120,7 @@ if __name__ == "__main__":
             'frequency_short': ["M"],
             'units': ["Percent"],
             'units_short': ["%"],
-            'date': [datetime(2024, 2, 1)],
+            'date': [datetime(2025, 2, 1)],
             'value': [2.031282]
         }),
         'UNRATE': pd.DataFrame({
@@ -129,7 +130,7 @@ if __name__ == "__main__":
             'frequency_short': ["M"],
             'units': ["Percent"],
             'units_short': ["%"],
-            'date': [datetime(2024, 1, 1)],
+            'date': [datetime(2025, 1, 1)],
             'value': [4]
         })
     }

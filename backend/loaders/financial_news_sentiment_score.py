@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from pymongo import UpdateOne
-from db.mongo_db import MongoDBConnector
+from loaders.db.mongo_db import MongoDBConnector
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 from tqdm import tqdm
 
