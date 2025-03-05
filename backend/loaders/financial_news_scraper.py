@@ -2,9 +2,9 @@ import re
 import requests
 from time import sleep
 from bs4 import BeautifulSoup
-from config.config_loader import ConfigLoader
-from db.mongo_db import MongoDBConnector
-from generic_scraper import GenericScraper
+from loaders.config.config_loader import ConfigLoader
+from loaders.db.mongo_db import MongoDBConnector
+from loaders.generic_scraper import GenericScraper
 from datetime import datetime, timezone
 
 import os

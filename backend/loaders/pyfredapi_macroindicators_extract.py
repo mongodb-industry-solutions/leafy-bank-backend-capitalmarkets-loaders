@@ -2,8 +2,8 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from config.config_loader import ConfigLoader
-from base_extract import BaseExtract
+from loaders.config.config_loader import ConfigLoader
+from loaders.base_extract import BaseExtract
 import pyfredapi as pf
 
 # Configure logging

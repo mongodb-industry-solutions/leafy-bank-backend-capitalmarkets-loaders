@@ -3,17 +3,21 @@ import logging
 import datetime as dt
 from datetime import datetime, timedelta, timezone
 
-from yfinance_tickers_extract import YFinanceTickersExtract
-from yfinance_tickers_transform import YFinanceTickersTransform
-from yfinance_tickers_load import YFinanceTickersLoad
-from yfinance_tickers_cleaner import YFinanceTickersCleaner
+from loaders.yfinance_tickers_extract import YFinanceTickersExtract
+from loaders.yfinance_tickers_transform import YFinanceTickersTransform
+from loaders.yfinance_tickers_load import YFinanceTickersLoad
+from loaders.yfinance_tickers_cleaner import YFinanceTickersCleaner
 
-from financial_news_scraper import FinancialNewsScraper
-from financial_news_embeddings import FinancialNewsEmbeddings
-from financial_news_sentiment_score import FinancialNewsSentimentScore
-from financial_news_cleaner import FinancialNewsCleaner
+from loaders.financial_news_scraper import FinancialNewsScraper
+from loaders.financial_news_embeddings import FinancialNewsEmbeddings
+from loaders.financial_news_sentiment_score import FinancialNewsSentimentScore
+from loaders.financial_news_cleaner import FinancialNewsCleaner
 
-from config.config_loader import ConfigLoader
+from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
+from loaders.pyfredapi_macroindicators_transform import PyFredAPITransform
+from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
+
+from loaders.config.config_loader import ConfigLoader
 
 from scheduler import Scheduler
 import scheduler.trigger as trigger
@@ -42,7 +46,7 @@ class LoaderScheduler:
         self.scheduler = Scheduler(tzinfo=timezone.utc)
         logger.info("LoaderScheduler initialized")
 
-    def run_etl(self):
+    def run_yfinance_market_data_etl(self):
         """
         Runs the ETL process: Extract, Transform, Load.
         """
@@ -78,6 +82,32 @@ class LoaderScheduler:
 
         logger.info("ETL process completed")
 
+    def run_pyfredapi_macroeconomic_data_etl(self):
+        """
+        Runs the ETL process for PyFredAPI macroeconomic data: Extract, Transform, Load.
+        """
+        logger.info("Starting PyFredAPI ETL process")
+
+        # Define date range for extraction
+        start_date = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y%m%d")
+        end_date = (datetime.now(timezone.utc) + timedelta(days=7)).strftime("%Y%m%d")
+
+        # Extract Macroeconomic Data
+        extractor = PyFredAPIExtract(start_date=start_date, end_date=end_date)
+        extracted_data = extractor.extract()
+
+        # Transform Macroeconomic Data
+        transformer = PyFredAPITransform()
+        transformed_data = {}
+        for series_id, df in extracted_data.items():
+            transformed_data[series_id] = transformer.transform(series_id, df)
+
+        # Load Macroeconomic Data
+        loader = PyFredAPILoad()
+        loader.load(transformed_data)
+
+        logger.info("PyFredAPI ETL process completed")
+
     def run_financial_news_processing(self):
         """
         Runs the Financial News processing: Scrape, Embeddings, Sentiment Score.
@@ -109,19 +139,18 @@ class LoaderScheduler:
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
         """
-        # test_time_etl = dt.time(hour=10, minute=5, tzinfo=timezone.utc)
-        test_time_news = dt.time(hour=11, minute=33, tzinfo=timezone.utc)
-
-        # self.scheduler.once(trigger.Tuesday(test_time_etl), self.run_etl)
-        self.scheduler.once(trigger.Tuesday(test_time_news), self.run_financial_news_processing)
 
         # Schedule Yahoo Finance tickers ETL process
-        etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
-        self.scheduler.weekly(trigger.Tuesday(etl_time), self.run_etl)
-        self.scheduler.weekly(trigger.Wednesday(etl_time), self.run_etl)
-        self.scheduler.weekly(trigger.Thursday(etl_time), self.run_etl)
-        self.scheduler.weekly(trigger.Friday(etl_time), self.run_etl)
-        self.scheduler.weekly(trigger.Saturday(etl_time), self.run_etl)
+        yfinance_market_data_etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
+        self.scheduler.weekly(trigger.Tuesday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
+        self.scheduler.weekly(trigger.Wednesday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
+        self.scheduler.weekly(trigger.Thursday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
+        self.scheduler.weekly(trigger.Friday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
+        self.scheduler.weekly(trigger.Saturday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
+
+        # Schedule PyFredAPI ETL process
+        run_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=4, minute=5, tzinfo=timezone.utc)
+        self.scheduler.daily(run_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
 
         # Schedule financial news processing
         news_processing_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
@@ -130,8 +159,8 @@ class LoaderScheduler:
         self.scheduler.weekly(trigger.Thursday(news_processing_time), self.run_financial_news_processing)
         self.scheduler.weekly(trigger.Friday(news_processing_time), self.run_financial_news_processing)
         self.scheduler.weekly(trigger.Saturday(news_processing_time), self.run_financial_news_processing)
-
-        logger.info("Scheduled ETL and financial news processing jobs from Tuesday to Saturday using UTC time")
+        
+        logger.info("Scheduled jobs configured!")
 
     def start(self):
         """

@@ -7,3 +7,7 @@ class GenericScraper(ABC):
     @abstractmethod
     def scrape_all_tickers(self, **kwargs):
         pass
+
+    @abstractmethod
+    def run(self, **kwargs):
+        pass
