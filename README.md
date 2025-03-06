@@ -37,8 +37,8 @@ MongoDB is a powerful database solution that excels in managing financial data, 
 
 ## MongoDB Key Features
 
-- **Time Series** - [More info](https://www.mongodb.com/products/capabilities/time-series): For storing market data in a time series format.
-- **Atlas Vector Search** - [More info](https://www.mongodb.com/products/platform/atlas-vector-search): For enabling vector search on financial news data.
+- **Time Series** - ([More info](https://www.mongodb.com/products/capabilities/time-series)): For storing market data in a time series format.
+- **Atlas Vector Search**  ([More info](https://www.mongodb.com/products/platform/atlas-vector-search)): For enabling vector search on financial news data.
 
 ## Tech Stack
 
