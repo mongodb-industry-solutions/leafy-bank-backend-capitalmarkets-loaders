@@ -3,21 +3,18 @@ import logging
 import datetime as dt
 from datetime import datetime, timedelta, timezone
 
+from loaders.config.config_loader import ConfigLoader
+
 from loaders.yfinance_tickers_extract import YFinanceTickersExtract
 from loaders.yfinance_tickers_transform import YFinanceTickersTransform
 from loaders.yfinance_tickers_load import YFinanceTickersLoad
 from loaders.yfinance_tickers_cleaner import YFinanceTickersCleaner
 
-from loaders.financial_news_scraper import FinancialNewsScraper
-from loaders.financial_news_embeddings import FinancialNewsEmbeddings
-from loaders.financial_news_sentiment_score import FinancialNewsSentimentScore
-from loaders.financial_news_cleaner import FinancialNewsCleaner
-
 from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
 from loaders.pyfredapi_macroindicators_transform import PyFredAPITransform
 from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
 
-from loaders.config.config_loader import ConfigLoader
+from loaders.financial_news_scraper import FinancialNewsScraper
 
 from scheduler import Scheduler
 import scheduler.trigger as trigger
@@ -80,7 +77,7 @@ class LoaderScheduler:
         cleaner = YFinanceTickersCleaner()
         cleaner.run()
 
-        logger.info("ETL process completed")
+        logger.info("YFinanceTickers ETL process completed")
 
     def run_pyfredapi_macroeconomic_data_etl(self):
         """
@@ -119,19 +116,7 @@ class LoaderScheduler:
             collection_name=os.getenv("NEWS_COLLECTION", "financial_news"),
             scrape_num_articles=int(os.getenv("SCRAPE_NUM_ARTICLES", 1))
         )
-        news_scraper.scrape_all_tickers()
-
-        # Embeddings
-        news_embeddings = FinancialNewsEmbeddings()
-        news_embeddings.run()
-
-        # Sentiment Score
-        news_sentiment_creator = FinancialNewsSentimentScore()
-        news_sentiment_creator.run()
-
-        # Clean up articles older than 100 for each ticker
-        news_cleaner = FinancialNewsCleaner()
-        news_cleaner.run()
+        news_scraper.run()
 
         logger.info("Financial News processing completed!")
 
@@ -139,6 +124,15 @@ class LoaderScheduler:
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
         """
+
+        #once_test_yfinance_market_data_etl_time = dt.time(hour=9, minute=13, tzinfo=timezone.utc)
+        #once_test_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=9, minute=15, tzinfo=timezone.utc)
+        once_test_financial_news_processing_time = dt.time(hour=11, minute=34, tzinfo=timezone.utc)
+
+        # Test run
+        #self.scheduler.once(once_test_yfinance_market_data_etl_time, self.run_yfinance_market_data_etl)
+        #self.scheduler.once(once_test_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
+        self.scheduler.once(once_test_financial_news_processing_time, self.run_financial_news_processing)
 
         # Schedule Yahoo Finance tickers ETL process
         yfinance_market_data_etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)

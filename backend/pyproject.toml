@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "your-virtual-env"
 version = "0.1.0"
-description = "Your Description"
-authors = ["Your Name <you@example.com>"]
+description = "This repository contains the backend implementation of data loaders for the Capital Markets demo."
+authors = ["Julian Boronat <julian.boronat@mongodb.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -17,6 +17,9 @@ scheduler = "^0.8.8"
 tqdm = "^4.67.1"
 transformers = "^4.49.0"
 torch = "^2.6.0"
+yfinance = "^0.2.54"
+pyfredapi = "^0.9.1"
+pandas = "^2.2.3"
 
 
 [build-system]
