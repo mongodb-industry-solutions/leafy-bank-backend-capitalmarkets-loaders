@@ -1,11 +1,11 @@
 services:
-  bank-capitalmarkets-loaders:
+  capitalmarkets-loaders:
     build:
       context: .
       no_cache: true
       dockerfile: Dockerfile.backend
-    image: bank-capitalmarkets-loaders-image:latest
+    image: capitalmarkets-loaders-image:latest
     ports:
       - "8000:8000"
     restart: always
-    container_name: bank-capitalmarkets-loaders-container
+    container_name: capitalmarkets-loaders-container
