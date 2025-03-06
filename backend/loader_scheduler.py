@@ -125,14 +125,14 @@ class LoaderScheduler:
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
         """
 
-        #once_test_yfinance_market_data_etl_time = dt.time(hour=9, minute=13, tzinfo=timezone.utc)
-        #once_test_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=9, minute=15, tzinfo=timezone.utc)
-        once_test_financial_news_processing_time = dt.time(hour=11, minute=34, tzinfo=timezone.utc)
-
-        # Test run
-        #self.scheduler.once(once_test_yfinance_market_data_etl_time, self.run_yfinance_market_data_etl)
-        #self.scheduler.once(once_test_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
-        self.scheduler.once(once_test_financial_news_processing_time, self.run_financial_news_processing)
+        # Test job times
+        once_test_time_yfinance = dt.time(hour=14, minute=25, tzinfo=timezone.utc)
+        once_test_time_pyfredapi = dt.time(hour=14, minute=27, tzinfo=timezone.utc)
+        once_test_time_news = dt.time(hour=14, minute=29, tzinfo=timezone.utc)
+        # Schedule test jobs
+        self.scheduler.once(once_test_time_yfinance, self.run_yfinance_market_data_etl)
+        self.scheduler.once(once_test_time_pyfredapi, self.run_pyfredapi_macroeconomic_data_etl)
+        self.scheduler.once(once_test_time_news, self.run_financial_news_processing)
 
         # Schedule Yahoo Finance tickers ETL process
         yfinance_market_data_etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
@@ -166,7 +166,3 @@ class LoaderScheduler:
         while True:
             self.scheduler.exec_jobs()
             time.sleep(1)
-
-if __name__ == "__main__":
-    scheduler = LoaderScheduler()
-    scheduler.start()
