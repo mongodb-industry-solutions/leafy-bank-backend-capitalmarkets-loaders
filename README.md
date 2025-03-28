@@ -15,7 +15,7 @@ The Capital Markets Loaders Service is responsible for:
 
 - **Yahoo Finance Market Data ETL**: Extracts, transforms, and loads market data for various asset types using the `yfinance` Python package.
 - **FRED API Macroeconomic Data ETL**: Extracts, transforms, and loads macroeconomic data using the `pyfredapi` Python package.
-- **Financial News Processing**: Scrapes financial news, generates embeddings using AWS Bedrock with the Cohere English v3 model, and calculates sentiment scores using the FinBERT model from Hugging Face.
+- **Financial News Processing**: Scrapes financial news, generates embeddings using `voyage-finance-2` model from Voyage AI, and calculates sentiment scores using the FinBERT model from Hugging Face.
 
 #### Scheduler
 
@@ -92,16 +92,16 @@ Follow [MongoDB's guide](https://www.mongodb.com/docs/atlas/security-add-mongodb
 Create a `.env` file in the `/backend` directory with the following content:
 
 ```bash
-MONGODB_URI=
+MONGODB_URI="your_mongodb_uri"
 DATABASE_NAME="agentic_capital_markets"
 APP_NAME="your_app_name"
-AWS_REGION=
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
+VOYAGE_API_KEY="your_voyage_api_key"
 FRED_API_KEY="your_fred_api_key"
 YFINANCE_TIMESERIES_COLLECTION = "yfinanceMarketData"
 PYFREDAPI_COLLECTION = "pyfredapiMacroeconomicIndicators"
 NEWS_COLLECTION = "financial_news"
+VECTOR_INDEX_NAME = "financial_news_VS_IDX"
+VECTOR_FIELD = "article_embedding"
 SCRAPE_NUM_ARTICLES = 1
 ```
 

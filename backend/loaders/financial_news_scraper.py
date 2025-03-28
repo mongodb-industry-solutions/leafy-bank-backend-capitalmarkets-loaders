@@ -202,7 +202,7 @@ class FinancialNewsScraper(GenericScraper):
 
     def get_article_embedding(self, text: str) -> list:
         """
-        Generates an embedding for the given text using BedrockCohereEnglishEmbeddings.
+        Generates an embedding for the given text.
         """
         if not text or not isinstance(text, str):
             logger.error("Invalid input text for embedding.")
