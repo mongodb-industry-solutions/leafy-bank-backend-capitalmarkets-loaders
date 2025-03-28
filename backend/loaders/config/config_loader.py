@@ -54,21 +54,3 @@ class ConfigLoader:
         """
         value = self.config_data.get(key, default)
         return value
-
-# ==================
-# Example usage
-# ==================
-
-if __name__ == "__main__":
-    config_loader = ConfigLoader()
-
-    # Load configurations
-    EXAMPLE_CSV_PATH = config_loader.get("EXAMPLE_CSV_PATH")
-    EXAMPLE_CSV_FILES = config_loader.get("EXAMPLE_CSV_FILES")
-    EXAMPLE_INDUSTRY = config_loader.get("EXAMPLE_INDUSTRY")
-    EXAMPLE_MODEL_ID = config_loader.get("EXAMPLE_MODEL_ID")
-
-    print(EXAMPLE_CSV_PATH)
-    print(EXAMPLE_CSV_FILES)
-    print(EXAMPLE_INDUSTRY)
-    print(EXAMPLE_MODEL_ID)

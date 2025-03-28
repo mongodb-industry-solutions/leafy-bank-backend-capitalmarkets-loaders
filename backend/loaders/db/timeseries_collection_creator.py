@@ -2,7 +2,7 @@ from pymongo import ASCENDING
 from pymongo.errors import CollectionInvalid
 from bson.codec_options import CodecOptions
 from bson.datetime_ms import DatetimeConversion
-from mongo_db import MongoDBConnector
+from backend.loaders.db.mdb import MongoDBConnector
 
 import logging
 

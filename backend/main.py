@@ -1,7 +1,10 @@
 import logging
-from fastapi import FastAPI, Request, APIRouter
+from fastapi import FastAPI, Request, APIRouter, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from loader_scheduler import LoaderScheduler
+from loader_service import LoaderService
+from pydantic import BaseModel, field_validator
+from datetime import datetime, timezone
 import threading
 
 # Configure logging
@@ -27,7 +30,162 @@ router = APIRouter()
 async def read_root(request: Request):
     return {"message": "Server is running"}
 
-@app.post("/scheduler_overview")
+############################
+### -- LOADER SERVICE -- ###
+############################
+
+# Initialize service
+loader_service = LoaderService()
+
+class DateRequest(BaseModel):
+    date_str: str
+
+    @field_validator('date_str')
+    def validate_date_str(cls, value):
+        if not value.isdigit() or len(value) != 8:
+            raise ValueError("date_str must be in '%Y%m%d' format")
+
+        date = datetime.strptime(value, "%Y%m%d")
+        current_date = datetime.now(timezone.utc).strftime("%Y%m%d")
+
+        if value >= current_date:
+            raise ValueError(
+                "date_str cannot be the current date or a future date")
+
+        return value
+
+class BackfillRequest(BaseModel):
+    start_date: str
+    end_date: str
+
+    @field_validator('start_date', 'end_date')
+    def validate_date(cls, value):
+        if not value.isdigit() or len(value) != 8:
+            raise ValueError("Dates must be in '%Y%m%d' format")
+        return value
+
+class SymbolRequest(DateRequest):
+    symbol: str
+
+class SeriesRequest(DateRequest):
+    series_id: str
+
+class BackfillSymbolRequest(BackfillRequest):
+    symbol: str
+
+class BackfillSeriesRequest(BackfillRequest):
+    series_id: str
+
+@app.post("/load-yfinance-market-data")
+async def load_yfinance_market_data(date_str: DateRequest):
+    try:
+        loader_service.load_yfinance_market_data(date_str.date_str)
+        return {"message": f"Yahoo Finance market data loading process completed for date {date_str.date_str}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading Yahoo Finance market data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/load-yfinance-market-data-by-symbol")
+async def load_yfinance_market_data_by_symbol(request: SymbolRequest):
+    try:
+        loader_service.load_yfinance_market_data_by_symbol(request.date_str, request.symbol)
+        return {"message": f"Yahoo Finance market data loading process completed for symbol {request.symbol} on date {request.date_str}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading Yahoo Finance market data by symbol: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/load-pyfredapi-macroeconomic-data")
+async def load_pyfredapi_macroeconomic_data(date_str: DateRequest):
+    try:
+        loader_service.load_pyfredapi_macroeconomic_data(date_str.date_str)
+        return {"message": f"PyFredAPI macroeconomic data loading process completed for date {date_str.date_str}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading PyFredAPI macroeconomic data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/load-pyfredapi-macroeconomic-data-by-series")
+async def load_pyfredapi_macroeconomic_data_by_series(request: SeriesRequest):
+    try:
+        loader_service.load_pyfredapi_macroeconomic_data_by_series(request.date_str, request.series_id)
+        return {"message": f"PyFredAPI macroeconomic data loading process completed for series ID {request.series_id} on date {request.date_str}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading PyFredAPI macroeconomic data by series: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backfill-yfinance-market-data")
+async def backfill_yfinance_market_data(request: BackfillRequest):
+    try:
+        loader_service.backfill_yfinance_market_data(request.start_date, request.end_date)
+        return {"message": f"Backfill for Yahoo Finance market data completed from {request.start_date} to {request.end_date}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling Yahoo Finance market data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backfill-yfinance-market-data-by-symbol")
+async def backfill_yfinance_market_data_by_symbol(request: BackfillSymbolRequest):
+    try:
+        loader_service.backfill_yfinance_market_data_by_symbol(request.start_date, request.end_date, request.symbol)
+        return {"message": f"Backfill for Yahoo Finance market data for symbol {request.symbol} completed from {request.start_date} to {request.end_date}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling Yahoo Finance market data by symbol: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backfill-pyfredapi-macroeconomic-data")
+async def backfill_pyfredapi_macroeconomic_data(request: BackfillRequest):
+    try:
+        loader_service.backfill_pyfredapi_macroeconomic_data(request.start_date, request.end_date)
+        return {"message": f"Backfill for PyFredAPI macroeconomic data completed from {request.start_date} to {request.end_date}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling PyFredAPI macroeconomic data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backfill-pyfredapi-macroeconomic-data-by-series")
+async def backfill_pyfredapi_macroeconomic_data_by_series(request: BackfillSeriesRequest):
+    try:
+        loader_service.backfill_pyfredapi_macroeconomic_data_by_series(request.start_date, request.end_date, request.series_id)
+        return {"message": f"Backfill for PyFredAPI macroeconomic data for series ID {request.series_id} completed from {request.start_date} to {request.end_date}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling PyFredAPI macroeconomic data by series: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/load-recent-financial-news")
+async def load_recent_financial_news():
+    try:
+        loader_service.load_recent_financial_news()
+        return {"message": "Financial News processing completed"}
+    except Exception as e:
+        logging.error(f"Error loading recent financial news: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+############################
+## -- LOADER SCHEDULER -- ##
+############################
+
+@app.post("/scheduler-overview")
 async def scheduler_overview():
     try:
         overview = str(scheduler.scheduler)

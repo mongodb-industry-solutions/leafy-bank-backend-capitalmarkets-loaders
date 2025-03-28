@@ -2,7 +2,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from loaders.db.mongo_db import MongoDBConnector
+from backend.loaders.db.mdb import MongoDBConnector
 from loaders.config.config_loader import ConfigLoader
 
 # Configure logging
@@ -34,11 +34,12 @@ class YFinanceTickersCleaner(MongoDBConnector):
         # Load configurations
         equities = config_loader.get("EQUITIES").split()
         bonds = config_loader.get("BONDS").split()
+        real_estate = config_loader.get("REAL_ESTATE").split()
         commodities = config_loader.get("COMMODITIES").split()
         market_volatility = config_loader.get("MARKET_VOLATILITY").split()
 
         # Combine all tickers into a single list
-        tickers = equities + bonds + commodities + market_volatility
+        tickers = equities + bonds + real_estate + commodities + market_volatility
 
         # Normalize tickers (remove special characters like ^)
         normalized_tickers = [ticker.replace("^", "") for ticker in tickers]

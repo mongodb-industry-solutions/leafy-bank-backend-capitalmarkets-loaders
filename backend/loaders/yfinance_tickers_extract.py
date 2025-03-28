@@ -65,6 +65,43 @@ class YFinanceTickersExtract(BaseExtract):
                         logger.error(
                             f"Failed to extract data for ticker {ticker} after 3 attempts.")
         return data_frames
+    
+    def extract_single_ticker(self, ticker: str) -> dict:
+        """
+        Extract data for a single ticker.
+
+        Args:
+            ticker (str): A single ticker symbol.
+
+        Returns:
+            dict: Data frame for the specified ticker, or None if extraction fails.
+        """
+        logger.info(f"Extracting data for single ticker: {ticker}")
+        for attempt in range(3):
+            try:
+                ticker_data = yf.Ticker(ticker).history(
+                    start=self.dt.strftime("%Y-%m-%d") if self.dt else None,
+                    end=self.dt_end.strftime("%Y-%m-%d") if self.dt_end else None,
+                    interval=self.interval
+                )
+                # Retain only the specified columns
+                ticker_data = ticker_data.filter(
+                    items=['Open', 'High', 'Low', 'Close', 'Volume'])
+                if ticker_data.empty:
+                    logger.warning(f"No data returned for ticker: {ticker}")
+                else:
+                    logger.info(f"Successfully extracted data for ticker: {ticker}")
+                    return {ticker: ticker_data}
+                break
+            except Exception as e:
+                logger.error(f"Error extracting data for ticker {ticker}: {e}")
+                if attempt < 2:
+                    logger.info(f"Retrying... ({attempt + 1}/3)")
+                    time.sleep(2)
+                else:
+                    logger.error(f"Failed to extract data for ticker {ticker} after 3 attempts.")
+        logger.warning(f"Extraction failed for ticker: {ticker}")
+        return None
 
     def extract_equities(self, equities: str) -> dict:
         """
@@ -94,6 +131,21 @@ class YFinanceTickersExtract(BaseExtract):
         logger.info("Extracting bonds data")
         data = self.extract_tickers(bonds)
         logger.info("Successfully extracted bonds data")
+        return data
+    
+    def extract_real_estate(self, real_estate: str) -> dict:
+        """
+        Extract data for real_estate.
+
+        Args:
+            real_estate (str): Real Estate.
+
+        Returns:
+            dict: Data frames for the specified real estate.
+        """
+        logger.info("Extracting real estate data")
+        data = self.extract_tickers(real_estate)
+        logger.info("Successfully extracted real estate data")
         return data
 
     def extract_commodities(self, commodities: str) -> dict:
@@ -133,12 +185,14 @@ class YFinanceTickersExtract(BaseExtract):
         # Load configurations
         equities = config_loader.get("EQUITIES")
         bonds = config_loader.get("BONDS")
+        real_estate = config_loader.get("REAL_ESTATE")
         commodities = config_loader.get("COMMODITIES")
         market_volatility = config_loader.get("MARKET_VOLATILITY")
 
         # Extract data for each asset type
         df_equities = self.extract_equities(equities)
         df_bonds = self.extract_bonds(bonds)
+        df_real_estate = self.extract_real_estate(real_estate)
         df_commodities = self.extract_commodities(commodities)
         df_market_volatility = self.extract_market_volatility(market_volatility)
 
@@ -146,33 +200,17 @@ class YFinanceTickersExtract(BaseExtract):
         return {
             "equities": df_equities,
             "bonds": df_bonds,
+            "real_estate": df_real_estate,
             "commodities": df_commodities,
             "market_volatility": df_market_volatility
         }
 
 
 if __name__ == "__main__":
-    # Example usage with dummy dates, adjust as necessary
-    extractor = YFinanceTickersExtract(start_date="20250219", end_date="20250220")
+    extractor = YFinanceTickersExtract(start_date="20250325", end_date="20250326")
+
+    # data = extractor.extract_single_ticker("VNQ")
+    # print(data)
 
     data = extractor.extract()
-
-    logger.info("Equities data:")
-    for ticker, df in data["equities"].items():
-        logger.info(f"Ticker: {ticker}")
-        logger.info(f"\n{df.head()}")
-
-    logger.info("Bonds data:")
-    for ticker, df in data["bonds"].items():
-        logger.info(f"Ticker: {ticker}")
-        logger.info(f"\n{df.head()}")
-
-    logger.info("Commodities data:")
-    for ticker, df in data["commodities"].items():
-        logger.info(f"Ticker: {ticker}")
-        logger.info(f"\n{df.tail()}")
-
-    logger.info("Market Volatility data:")
-    for ticker, df in data["market_volatility"].items():
-        logger.info(f"Ticker: {ticker}")
-        logger.info(f"\n{df.tail()}")
+    print(data)
