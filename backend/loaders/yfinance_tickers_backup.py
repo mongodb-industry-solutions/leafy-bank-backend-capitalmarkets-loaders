@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytz
-from backend.loaders.db.mdb import MongoDBConnector
+from loaders.db.mdb import MongoDBConnector
 from bson import json_util
 import logging
 from config.config_loader import ConfigLoader

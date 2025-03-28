@@ -3,14 +3,14 @@ import re
 import requests
 from time import sleep
 from bs4 import BeautifulSoup
-from config.config_loader import ConfigLoader
-from db.mdb import MongoDBConnector
-from generic_scraper import GenericScraper
+from loaders.config.config_loader import ConfigLoader
+from loaders.db.mdb import MongoDBConnector
+from loaders.generic_scraper import GenericScraper
 from datetime import datetime, timezone
 
 from tqdm import tqdm
 from pymongo import UpdateOne
-from embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
+from loaders.embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
@@ -105,15 +105,14 @@ class FinancialNewsScraper(GenericScraper):
         config_loader = ConfigLoader()
 
         # Load configurations
-        # equities = config_loader.get("EQUITIES").split()
-        # bonds = config_loader.get("BONDS").split()
+        equities = config_loader.get("EQUITIES").split()
+        bonds = config_loader.get("BONDS").split()
         real_estate = config_loader.get("REAL_ESTATE").split()
-        # commodities = config_loader.get("COMMODITIES").split()
-        # market_volatility = config_loader.get("MARKET_VOLATILITY").split()
+        commodities = config_loader.get("COMMODITIES").split()
+        market_volatility = config_loader.get("MARKET_VOLATILITY").split()
 
         # Combine all tickers into a single list
-        # tickers = equities + bonds + real_estate + commodities + market_volatility
-        tickers = real_estate
+        tickers = equities + bonds + real_estate + commodities + market_volatility
 
         # Normalize tickers (remove special characters like ^)
         normalized_tickers = [ticker.replace("^", "") for ticker in tickers]

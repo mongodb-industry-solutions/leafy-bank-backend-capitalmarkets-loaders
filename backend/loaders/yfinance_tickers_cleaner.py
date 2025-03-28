@@ -2,7 +2,7 @@ import os
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-from backend.loaders.db.mdb import MongoDBConnector
+from loaders.db.mdb import MongoDBConnector
 from loaders.config.config_loader import ConfigLoader
 
 # Configure logging
