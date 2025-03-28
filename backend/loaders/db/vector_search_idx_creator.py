@@ -1,4 +1,4 @@
-from mongo_db import MongoDBConnector
+from backend.loaders.db.mdb import MongoDBConnector
 import os
 import logging
 from dotenv import load_dotenv

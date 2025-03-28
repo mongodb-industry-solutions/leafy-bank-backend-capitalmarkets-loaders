@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 import pytz
-from db.mongo_db import MongoDBConnector
+from backend.loaders.db.mdb import MongoDBConnector
 from bson import json_util
 import logging
 from config.config_loader import ConfigLoader
@@ -84,12 +84,13 @@ if __name__ == "__main__":
     config_loader = ConfigLoader()
     equities         = config_loader.get("EQUITIES")          # e.g.: "SPY QQQ EEM XLE"
     bonds            = config_loader.get("BONDS")             # e.g.: "TLT LQD HYG"
+    real_estate      = config_loader.get("REAL_ESTATE")       # e.g.: "VNQ"
     commodities      = config_loader.get("COMMODITIES")       # e.g.: "GLD USO"
     market_volatility= config_loader.get("MARKET_VOLATILITY") # e.g.: "^VIX"
     
     # Combine tickers from all asset types (assuming they are space-separated).
     tickers_list = set()
-    for tickers in [equities, bonds, commodities, market_volatility]:
+    for tickers in [equities, bonds, real_estate, commodities, market_volatility]:
         if tickers:
             for ticker in tickers.split():
                 tickers_list.add(ticker)

@@ -20,6 +20,7 @@ torch = "^2.6.0"
 yfinance = "^0.2.54"
 pyfredapi = "^0.9.1"
 pandas = "^2.2.3"
+voyageai = "^0.3.2"
 
 
 [build-system]

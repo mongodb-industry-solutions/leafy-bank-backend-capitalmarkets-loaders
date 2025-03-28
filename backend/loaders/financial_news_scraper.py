@@ -3,14 +3,14 @@ import re
 import requests
 from time import sleep
 from bs4 import BeautifulSoup
-from loaders.config.config_loader import ConfigLoader
-from loaders.db.mongo_db import MongoDBConnector
-from loaders.generic_scraper import GenericScraper
+from config.config_loader import ConfigLoader
+from db.mdb import MongoDBConnector
+from generic_scraper import GenericScraper
 from datetime import datetime, timezone
 
 from tqdm import tqdm
 from pymongo import UpdateOne
-from loaders.embeddings.bedrock.cohere_embeddings import BedrockCohereEnglishEmbeddings
+from embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
@@ -51,12 +51,12 @@ class FinancialNewsScraper(GenericScraper):
         self.mongo_client = MongoDBConnector()
         # Get the database collection
         self.collection = self.mongo_client.get_collection(collection_name=collection_name)
-        # Instantiate the embeddings model
-        self.embeddings_model = BedrockCohereEnglishEmbeddings(
-            region_name=os.getenv("AWS_REGION"),
-            aws_access_key=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_key=os.getenv("AWS_SECRET_ACCESS_KEY")
-        )
+        # == EMBEDDINGS ==
+        # Instantiate the VogayeAIEmbeddings class
+        self.vogaye_embeddings = VogayeAIEmbeddings(api_key=os.getenv("VOYAGE_API_KEY"))
+        # https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/
+        self.vogate_model_id = "voyage-finance-2"
+        # == SENTIMENT SCORE ==
         # Load the FinBERT model and tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         self.model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
@@ -105,13 +105,15 @@ class FinancialNewsScraper(GenericScraper):
         config_loader = ConfigLoader()
 
         # Load configurations
-        equities = config_loader.get("EQUITIES").split()
-        bonds = config_loader.get("BONDS").split()
-        commodities = config_loader.get("COMMODITIES").split()
-        market_volatility = config_loader.get("MARKET_VOLATILITY").split()
+        # equities = config_loader.get("EQUITIES").split()
+        # bonds = config_loader.get("BONDS").split()
+        real_estate = config_loader.get("REAL_ESTATE").split()
+        # commodities = config_loader.get("COMMODITIES").split()
+        # market_volatility = config_loader.get("MARKET_VOLATILITY").split()
 
         # Combine all tickers into a single list
-        tickers = equities + bonds + commodities + market_volatility
+        # tickers = equities + bonds + real_estate + commodities + market_volatility
+        tickers = real_estate
 
         # Normalize tickers (remove special characters like ^)
         normalized_tickers = [ticker.replace("^", "") for ticker in tickers]
@@ -199,7 +201,7 @@ class FinancialNewsScraper(GenericScraper):
         )
         return article_str
 
-    def get_article_embedding(self, text: str):
+    def get_article_embedding(self, text: str) -> list:
         """
         Generates an embedding for the given text using BedrockCohereEnglishEmbeddings.
         """
@@ -207,7 +209,7 @@ class FinancialNewsScraper(GenericScraper):
             logger.error("Invalid input text for embedding.")
             return None
         try:
-            embedding = self.embeddings_model.predict(text)
+            embedding = self.vogaye_embeddings.get_embeddings(model_id=self.vogate_model_id, text=text)
             return embedding
         except Exception as e:
             logger.error("Error generating embedding: %s", e)

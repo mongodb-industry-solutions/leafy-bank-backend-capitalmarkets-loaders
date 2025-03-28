@@ -7,21 +7,32 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class MongoDBConnector:
+    """ A class to provide access to a MongoDB database.
+    This class handles the connection to the database and provides methods to interact with collections and documents.
+
+    Attributes:
+        uri (str): The connection string URI for the MongoDB database.
+        database_name (str): The name of the database to connect to.
+        appname (str): The name of the application connecting to the database.
+        collection_name (str): The name of the collection to interact with.
+    """
     _instance = None
 
-    def __new__(cls, uri=None, database_name=None, appname=None):
+    def __new__(cls, uri=None, database_name=None, collection_name=None, appname=None):
+        """ Singleton instance to ensure only one connection to MongoDB. """
 
         if not cls._instance:
             cls._instance = super(MongoDBConnector, cls).__new__(cls)
             cls._instance.uri = uri or os.getenv("MONGODB_URI")
             cls._instance.database_name = database_name or os.getenv("DATABASE_NAME")
             cls._instance.appname = appname or os.getenv("APP_NAME")
+            cls._instance.collection_name = collection_name
             cls._instance.client = MongoClient(cls._instance.uri, appname=cls._instance.appname)
             cls._instance.db = cls._instance.client[cls._instance.database_name]
             cls._instance._initialized = True
         return cls._instance
 
-    def __init__(self, uri=None, database_name=None, appname=None):
+    def __init__(self, uri=None, database_name=None, collection_name=None, appname=None):
         """ Prevent reinitialization in the singleton. """
         pass
 

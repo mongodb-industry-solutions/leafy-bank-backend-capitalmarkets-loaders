@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime, time, timedelta
 import pytz
-from loaders.db.mongo_db import MongoDBConnector
+from backend.loaders.db.mdb import MongoDBConnector
 import logging
 import os
 from bson import json_util
