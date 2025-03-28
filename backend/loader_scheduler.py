@@ -138,10 +138,14 @@ class LoaderScheduler:
         self.scheduler.daily(run_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
 
         # Schedule financial news processing
-        # TODO: Disabling financial news processing for now, we plan to use a fixed dataset for the project
-        # TODO: In addition, we want to start using this Vogaye AI embedding model for the news processing
-        # TODO: https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/
-        # TODO: Once above steps are completed, we can remove these comments
+        # NOTE: Financial news scraping process is disabled for now, a fixed dataset is used for this project.
+        # The reasons are:
+        # 1. To avoid unnecessary recurrent scraping of news articles during runtime.
+        # 2. Reduce costs by minimizing Voyage AI requests for embeddings.
+        # 3. Minimize delays on calculating sentiment scores.
+        # 4. Have better control over user flow and experience.
+        # In real-world scenarios, you will have your own dataset or data retrieval/ingestion process for financial news.
+        ########################################################################
         # news_processing_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
         # self.scheduler.weekly(trigger.Tuesday(news_processing_time), self.run_financial_news_processing)
         # self.scheduler.weekly(trigger.Wednesday(news_processing_time), self.run_financial_news_processing)
