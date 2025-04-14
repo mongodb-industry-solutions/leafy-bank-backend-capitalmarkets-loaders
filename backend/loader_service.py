@@ -12,6 +12,8 @@ from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
 from loaders.pyfredapi_macroindicators_transform import PyFredAPITransform
 from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
 
+from loaders.portfolio_performance_load import PorfolioPerformanceLoad
+
 from loaders.config.config_loader import ConfigLoader
 
 import os
@@ -32,15 +34,18 @@ class LoaderService:
         """
         Service for ADHOC loading requests of market data, macroeconomic data, and financial news data.
         This service provides methods for:
-        1. Loading Yahoo Finance market data for a given date. (load_yfinance_market_data)
-        2. Loading Yahoo Finance market data for a given date and symbol. (load_yfinance_market_data_by_symbol)
-        3. Loading PyFredAPI macroeconomic data for a given date. (load_pyfredapi_macroeconomic_data)
-        4. Loading PyFredAPI macroeconomic data for a given date and series id. (load_pyfredapi_macroeconomic_data_by_series)
-        5. Backfilling Yahoo Finance market data for a given date range. (backfill_yfinance_market_data)
-        6. Backfilling Yahoo Finance market data for a given date range and symbol. (backfill_yfinance_market_data_by_symbol)
-        7. Backfilling PyFredAPI macroeconomic data for a given date range. (backfill_pyfredapi_macroeconomic_data)
-        8. Backfilling PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
-        9. Loading recent financial news data. (load_recent_financial_news)
+        1. Load Yahoo Finance market data for a given date. (load_yfinance_market_data)
+        2. Load Yahoo Finance market data for a given date and symbol. (load_yfinance_market_data_by_symbol)
+        3. Load PyFredAPI macroeconomic data for a given date. (load_pyfredapi_macroeconomic_data)
+        4. Load PyFredAPI macroeconomic data for a given date and series id. (load_pyfredapi_macroeconomic_data_by_series)
+        5. Load Portfolio Performance yesterday data. (insert_portfolio_performance_yesterday_data)
+        6. Load Portfolio Performance data for a given date. (insert_portfolio_performance_data_for_date)
+        7. Backfill Yahoo Finance market data for a given date range. (backfill_yfinance_market_data)
+        8. Backfill Yahoo Finance market data for a given date range and symbol. (backfill_yfinance_market_data_by_symbol)
+        9. Backfill PyFredAPI macroeconomic data for a given date range. (backfill_pyfredapi_macroeconomic_data)
+        10. Backfill PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
+        11. Backfill Portfolio Performance data for a given date range. (backfill_portfolio_performance_data)
+        12. Load recent financial news data. (load_recent_financial_news)
         """ 
         self.config_loader = ConfigLoader()
         self.utc = timezone.utc
@@ -205,6 +210,57 @@ class LoaderService:
 
         logger.info(f"PyFredAPI macroeconomic data loading process completed for series ID: {series_id}")
 
+    def insert_portfolio_performance_yesterday_data(self) -> dict:
+        """
+        Loads portfolio performance data for yesterday.
+        Checks if data already exists to prevent duplicates.
+
+        Returns:
+            dict: Status and result of the operation.
+        """
+        logger.info("Starting portfolio performance data loading for yesterday")
+        
+        loader = PorfolioPerformanceLoad()
+        result = loader.insert_portfolio_performance_yesterday_data()
+        
+        if result["status"] == "exists":
+            logger.info(f"Portfolio performance data for yesterday already exists, no action taken")
+        else:
+            logger.info(f"Portfolio performance data for yesterday successfully loaded")
+            
+        return result
+        
+    def insert_portfolio_performance_data_for_date(self, date_str: str) -> dict:
+        """
+        Loads portfolio performance data for a specific date.
+        
+        Args:
+            date_str (str): Date in ISO format "YYYYMMDD" (e.g., "20250414")
+            
+        Returns:
+            dict: Status and result of the operation.
+        """
+        logger.info(f"Starting portfolio performance data loading for date: {date_str}")
+        
+        # Validate date format
+        try:
+            datetime.strptime(date_str, "%Y%m%d")
+        except ValueError:
+            error_msg = f"Invalid date format: {date_str}. Please use YYYYMMDD format."
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
+            
+        loader = PorfolioPerformanceLoad()
+        result = loader.insert_portfolio_performance_data_for_date(date_str)
+        
+        if result["status"] == "exists":
+            logger.info(f"Portfolio performance data for {date_str} already exists, no action taken")
+        elif result["status"] == "inserted":
+            logger.info(f"Portfolio performance data for {date_str} successfully loaded")
+        else:
+            logger.warning(f"Portfolio performance data loading for {date_str} returned: {result}")
+            
+        return result
     
     def backfill_yfinance_market_data(self, start_date: str, end_date: str):
         """
@@ -271,6 +327,37 @@ class LoaderService:
             self.load_pyfredapi_macroeconomic_data_by_series(date_str, series_id)
             current_date += timedelta(days=1)
         logger.info(f"Backfill for PyFredAPI macroeconomic data for series ID {series_id} completed")
+
+    def backfill_portfolio_performance_data(self, start_date: str, end_date: str) -> dict:
+        """
+        Backfills portfolio performance data for the given date range.
+        
+        Args:
+            start_date (str): Start date in ISO format "YYYYMMDD" (e.g., "20250414") 
+            end_date (str): End date in ISO format "YYYYMMDD" (e.g., "20250420")
+            
+        Returns:
+            dict: Summary of the backfill operation.
+        """
+        # Validate date formats
+        try:
+            datetime.strptime(start_date, "%Y%m%d")
+            datetime.strptime(end_date, "%Y%m%d")
+        except ValueError as e:
+            error_msg = f"Invalid date format. Please use YYYYMMDD format. Error: {str(e)}"
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
+        
+        # Initialize Portfolio Performance Loader and run backfill
+        loader = PorfolioPerformanceLoad()
+        result = loader.backfill_portfolio_performance_data(start_date, end_date)
+        
+        if result["status"] == "completed":
+            logger.info(f"Backfill for portfolio performance data completed: {result['inserted_count']} inserted, {result['skipped_count']} skipped")
+        else:
+            logger.error(f"Backfill for portfolio performance data failed: {result}")
+            
+        return result
 
     def load_recent_financial_news(self):
         """

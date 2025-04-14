@@ -16,6 +16,8 @@ from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
 
 from loaders.financial_news_scraper import FinancialNewsScraper
 
+from loaders.portfolio_performance_load import PorfolioPerformanceLoad
+
 from scheduler import Scheduler
 import scheduler.trigger as trigger
 import pytz
@@ -120,6 +122,29 @@ class LoaderScheduler:
 
         logger.info("Financial News processing completed!")
 
+    def run_insert_portfolio_performance_yesterday_data(self):
+        """
+        Runs the daily portfolio performance data generation and insertion.
+        Ensures yesterday's portfolio performance data is available.
+        """
+        logger.info("Starting portfolio performance data generation for yesterday")
+        
+        try:
+            # Initialize Portfolio Performance Loader
+            loader = PorfolioPerformanceLoad()
+            
+            # Insert yesterday's data if not already present
+            result = loader.insert_portfolio_performance_yesterday_data()
+            
+            if result["status"] == "exists":
+                logger.info("Yesterday's portfolio performance data already exists. No action needed.")
+            else:
+                logger.info(f"Generated and inserted portfolio performance data for yesterday: {result['date'].date()}")
+            
+            logger.info("Portfolio performance data processing completed!")
+        except Exception as e:
+            logger.error(f"Error during portfolio performance data processing: {str(e)}")
+
     def schedule_jobs(self):
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
@@ -136,6 +161,10 @@ class LoaderScheduler:
         # Schedule PyFredAPI ETL process
         run_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=4, minute=5, tzinfo=timezone.utc)
         self.scheduler.daily(run_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
+
+        # Schedule Portfolio Performance insert
+        portfolio_performance_insert_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
+        self.scheduler.daily(portfolio_performance_insert_time, self.run_insert_portfolio_performance_yesterday_data)
 
         # Schedule financial news processing
         # NOTE: Financial news scraping process is disabled for now, a fixed dataset is used for this project.

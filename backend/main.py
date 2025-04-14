@@ -123,6 +123,63 @@ async def load_pyfredapi_macroeconomic_data_by_series(request: SeriesRequest):
     except Exception as e:
         logging.error(f"Error loading PyFredAPI macroeconomic data by series: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/insert-portfolio-performance-yesterday-data")
+async def insert_portfolio_performance_yesterday_data():
+    """
+    Loads portfolio performance data for yesterday.
+    This endpoint doesn't require any input parameters as it works with yesterday's date.
+    """
+    try:
+        result = loader_service.insert_portfolio_performance_yesterday_data()
+        if result["status"] == "exists":
+            return {"message": "Portfolio performance data for yesterday already exists, no action taken"}
+        else:
+            return {"message": "Portfolio performance data for yesterday successfully loaded", "data": result}
+    except Exception as e:
+        logging.error(f"Error loading portfolio performance data for yesterday: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/insert-portfolio-performance-data-for-date")
+async def insert_portfolio_performance_data_for_date(date_str: DateRequest):
+    """
+    Loads portfolio performance data for a specific date.
+    """
+    try:
+        result = loader_service.insert_portfolio_performance_data_for_date(date_str.date_str)
+        if result["status"] == "error":
+            raise ValueError(result["message"])
+        elif result["status"] == "exists":
+            return {"message": f"Portfolio performance data for {date_str.date_str} already exists, no action taken"}
+        else:
+            return {"message": f"Portfolio performance data for {date_str.date_str} successfully loaded", "data": result}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading portfolio performance data for date: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/backfill-portfolio-performance-data")
+async def backfill_portfolio_performance_data(request: BackfillRequest):
+    """
+    Backfills portfolio performance data for a specific date range.
+    """
+    try:
+        result = loader_service.backfill_portfolio_performance_data(request.start_date, request.end_date)
+        if result["status"] == "error":
+            raise ValueError(result["message"])
+        return {
+            "message": f"Backfill for portfolio performance data completed from {request.start_date} to {request.end_date}",
+            "inserted_count": result.get("inserted_count", 0),
+            "skipped_count": result.get("skipped_count", 0)
+        }
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling portfolio performance data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/backfill-yfinance-market-data")
 async def backfill_yfinance_market_data(request: BackfillRequest):
@@ -214,6 +271,8 @@ async def scheduler_overview():
                         job["function"] = "run_pyfredapi_macroeconomic_data_etl"
                     elif job["function"] == "#_processing(..)":
                         job["function"] = "run_financial_news_processing"
+                    if job["function"] == "#terday_data(..)":
+                        job["function"] = "run_insert_portfolio_performance_yesterday_data"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
@@ -235,6 +294,8 @@ async def scheduler_overview():
                         job["function"] = "run_pyfredapi_macroeconomic_data_etl"
                     elif job["function"] == "#_processing(..)":
                         job["function"] = "run_financial_news_processing"
+                    if job["function"] == "#terday_data(..)":
+                        job["function"] = "run_insert_portfolio_performance_yesterday_data"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
