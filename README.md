@@ -2,6 +2,10 @@
 
 This repository hosts the backend for the **Capital Markets Loaders** service. It is designed to handle the extraction, transformation, and loading (ETL) of financial data from various sources, including Yahoo Finance and the Federal Reserve Economic Data (FRED) API, as well as financial news processing.
 
+## High Level Architecture
+
+![High Level Architecture](architecture/diagram.png)
+
 ## What is the Capital Markets Loaders Service?
 
 The Capital Markets Loaders Service is responsible for:
@@ -9,6 +13,7 @@ The Capital Markets Loaders Service is responsible for:
 - Extracting market data from Yahoo Finance.
 - Extracting macroeconomic data from the FRED API.
 - Scraping and processing financial news.
+- Generating portfolio performance (emulation).
 - Transforming and loading the extracted data into MongoDB for further analysis.
 
 #### ETL Processes
