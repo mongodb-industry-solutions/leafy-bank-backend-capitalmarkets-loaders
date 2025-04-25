@@ -124,6 +124,8 @@ Before you begin, ensure you have met the following requirements:
    - `financial_news` (for storing financial news data) - You can export some sample data to this collection using `backend/loaders/db/collections/agentic_capital_markets.financial_news.json` file.
    - `pyfredapiMacroeconomicIndicators` (for storing macroeconomic data) - You can export some sample data to this collection using `backend/loaders/db/collections/agentic_capital_markets.pyfredapiMacroeconomicIndicators.json` file.
    - `yfinanceMarketData` (for storing market data) - You can export some sample data to this collection using `backend/loaders/db/collections/agentic_capital_markets.yfinanceMarketData.json` file. Additionally, there are some more backup files in this directory that you can use to populate the collection:  `backend/loaders/backup/*`
+   - `portfolio_allocation` (for storing portfolio allocation data)
+   - `portfolio_performance` (for storing portfolio performance data) 
 
 > **_Note:_** For creating the time series collection, you can run the following python script located in the `backend/loaders/db/` directory: `mdb_timeseries_coll_creator.py`. Make sure to parametrize the script accordingly.
 
