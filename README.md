@@ -16,44 +16,6 @@ The Capital Markets Loaders Service is responsible for:
 - Generating portfolio performance (emulation).
 - Transforming and loading the extracted data into MongoDB for further analysis.
 
-#### ETL Processes
-
-- **Yahoo Finance Market Data ETL**: Extracts, transforms, and loads market data for various asset types using the `yfinance` Python package.
-- **FRED API Macroeconomic Data ETL**: Extracts, transforms, and loads macroeconomic data using the `pyfredapi` Python package.
-- **Financial News Processing**: Scrapes financial news, generates embeddings using [`voyage-finance-2`](https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/) model from Voyage AI, and calculates sentiment scores using [FinBERT](https://huggingface.co/ProsusAI/finbert), a pre-trained NLP model to analyze sentiment of financial text.
-
-#### News Sentiment Logic (Calculation)
-
-The financial news sentiment analysis follows a sophisticated pipeline to extract meaningful insights from news articles:
-
-1. **Data Ingestion**: The system scrapes financial news articles from Yahoo Search, storing them in the `financial_news` collection in MongoDB. For Phase 1, we use a fixed dataset of approximately 255 articles covering the 10 assets in the portfolio (about 20 articles per asset).
-
-2. **Text Processing**: For each article, we construct a comprehensive `article_string` by concatenating multiple fields:
-
-```bash
-Headline: QQQ Leads Inflows as VGIT, HYG Jump: ETF Flows as of Feb. 27
-/n Description: Top 10 Creations (All ETFs) Ticker Name Net Flows ($, mm) AUM ($, mm) AUM % Change QQQ Invesco QQQ...
-/n Source: etf.com ·  via Yahoo Finance
-/n Ticker: HYG
-/n Link: https://finance.yahoo.com/news/qqq-leads-inflows-vgit-hyg-005429051.html?fr=sycsrp_catchall
-```
-
-3. **Sentiment Analysis**: The `article_string` is processed by [FinBERT](https://huggingface.co/ProsusAI/finbert), a financial-domain-specific language model trained to understand financial text sentiment. This generates a sentiment score for each article.
-
-4. **Data Enrichment**: The sentiment scores are stored back in the `financial_news` collection, associating each article with its computed sentiment.
-
-5. **Vector Embedding Generation**: The same `article_string` is passed to the [voyage-finance-2](https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/) model, generating a 1024-dimensional vector representation (`article_embedding`) that captures the semantic meaning of the article.
-
-6. **Semantic Search Implementation**: Using MongoDB's Vector Search capability, the system can find semantically similar news articles based on these embeddings—identifying both explicit mentions of a ticker symbol and contextually relevant articles that don't directly reference it.
-
-7. **Portfolio Sentiment Calculation**: For each asset in the portfolio, the system calculates an average sentiment score from its related articles, providing a consolidated sentiment indicator that helps assess market perception of that asset.
-
-This approach enables both explicit keyword matching and deeper semantic understanding of financial news, offering more comprehensive insights than traditional text-based searches.
-
-#### Scheduler
-
-- **Job Scheduling**: Uses the [`scheduler`](https://digon.io/hyd/project/scheduler/t/master/readme.html) Python package to schedule and manage ETL processes.
-
 ## Where Does MongoDB Shine?
 
 MongoDB stands out as an ideal database solution for this Capital Markets Loaders service due to its exceptional ability to handle diverse data types within a single database platform:
@@ -105,6 +67,45 @@ This versatility eliminates the need for multiple specialized databases, reducin
 
 - [FinBERT](https://huggingface.co/ProsusAI/finbert) for sentiment score calculation.
 - [voyage-finance-2](https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/) for generating article embeddings.
+
+### ETL Processes
+
+- **Yahoo Finance Market Data ETL**: Extracts, transforms, and loads market data for various asset types using the `yfinance` Python package.
+- **FRED API Macroeconomic Data ETL**: Extracts, transforms, and loads macroeconomic data using the `pyfredapi` Python package.
+- **Financial News Processing**: Scrapes financial news, generates embeddings using [`voyage-finance-2`](https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/) model from Voyage AI, and calculates sentiment scores using [FinBERT](https://huggingface.co/ProsusAI/finbert), a pre-trained NLP model to analyze sentiment of financial text.
+
+### News Sentiment Logic (Calculation)
+
+The financial news sentiment analysis follows a sophisticated pipeline to extract meaningful insights from news articles:
+
+1. **Data Ingestion**: The system scrapes financial news articles from Yahoo Search, storing them in the `financial_news` collection in MongoDB. For Phase 1, we use a fixed dataset of approximately 255 articles covering the 10 assets in the portfolio (about 20 articles per asset).
+
+2. **Text Processing**: For each article, we construct a comprehensive `article_string` by concatenating multiple fields:
+
+```bash
+Headline: QQQ Leads Inflows as VGIT, HYG Jump: ETF Flows as of Feb. 27
+/n Description: Top 10 Creations (All ETFs) Ticker Name Net Flows ($, mm) AUM ($, mm) AUM % Change QQQ Invesco QQQ...
+/n Source: etf.com ·  via Yahoo Finance
+/n Ticker: HYG
+/n Link: https://finance.yahoo.com/news/qqq-leads-inflows-vgit-hyg-005429051.html?fr=sycsrp_catchall
+```
+
+3. **Sentiment Analysis**: The `article_string` is processed by [FinBERT](https://huggingface.co/ProsusAI/finbert), a financial-domain-specific language model trained to understand financial text sentiment. This generates a sentiment score for each article.
+
+4. **Data Enrichment**: The sentiment scores are stored back in the `financial_news` collection, associating each article with its computed sentiment.
+
+5. **Vector Embedding Generation**: The same `article_string` is passed to the [voyage-finance-2](https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/) model, generating a 1024-dimensional vector representation (`article_embedding`) that captures the semantic meaning of the article.
+
+6. **Semantic Search Implementation**: Using MongoDB's Vector Search capability, the system can find semantically similar news articles based on these embeddings—identifying both explicit mentions of a ticker symbol and contextually relevant articles that don't directly reference it.
+
+7. **Portfolio Sentiment Calculation**: For each asset in the portfolio, the system calculates an average sentiment score from its related articles, providing a consolidated sentiment indicator that helps assess market perception of that asset.
+
+This approach enables both explicit keyword matching and deeper semantic understanding of financial news, offering more comprehensive insights than traditional text-based searches.
+
+### Scheduler
+
+- **Job Scheduling**: Uses the [`scheduler`](https://digon.io/hyd/project/scheduler/t/master/readme.html) Python package to schedule and manage ETL processes.
+
 
 ## Prerequisites
 
