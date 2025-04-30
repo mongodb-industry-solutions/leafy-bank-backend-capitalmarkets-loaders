@@ -70,12 +70,15 @@ class PyFredAPILoad(MongoDBConnector):
                 if '_id' in record:
                     del record['_id']
 
-            # Insert data into the collection
-            result = self.db[self.collection_name].insert_many(records)
-            logger.info(f"Inserted {len(result.inserted_ids)} documents into collection {self.collection_name}")
-            for record in records:
-                logger.info(f"Inserted document with date: {record['date']} and value: {record['value']}")
-            return {"inserted_count": len(result.inserted_ids)}
+            # Sort records by date descending
+            records.sort(key=lambda x: x['date'], reverse=True)
+            # Limit to the most recent record
+            record = records[0]
+
+            # Insert record into the collection
+            result = self.db[self.collection_name].insert_one(record)
+            logger.info(f"Inserted document with date: {record['date']} and value: {record['value']}")
+            return {"inserted_count": 1 if result.inserted_id else 0}
         except Exception as e:
             logger.error(f"Error inserting data into collection {self.collection_name}: {e}")
             return {"inserted_count": 0}
@@ -96,7 +99,7 @@ class PyFredAPILoad(MongoDBConnector):
             logger.info(f"Inserting macroeconomic data for series_id: {series_id}")
             try:
                 result = self.insert_macroeconomic_data(df)
-                logger.info(f"Inserted {result['inserted_count']} documents for series_id: {series_id}")
+                logger.info(f"Inserted {result['inserted_count']} document for series_id: {series_id}")
             except Exception as e:
                 logger.error(f"Error inserting data for series_id {series_id}: {e}")
 
