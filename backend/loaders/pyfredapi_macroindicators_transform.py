@@ -54,11 +54,11 @@ class PyFredAPITransform:
                 df.loc[:, 'frequency_short'] = "Q"
                 df.loc[:, 'units'] = "Billions of Dollars"
                 df.loc[:, 'units_short'] = "Bil. of $"
-            elif macro_indicator_id == "REAINTRATREARAT10Y":
-                df.loc[:, 'title'] = "10-Year Real Interest Rate"
-                df.loc[:, 'series_id'] = "REAINTRATREARAT10Y"
-                df.loc[:, 'frequency'] = "Monthly"
-                df.loc[:, 'frequency_short'] = "M"
+            elif macro_indicator_id == "DFF":
+                df.loc[:, 'title'] = "Federal Funds Effective Rate"
+                df.loc[:, 'series_id'] = "DFF"
+                df.loc[:, 'frequency'] = "Daily"
+                df.loc[:, 'frequency_short'] = "D"
                 df.loc[:, 'units'] = "Percent"
                 df.loc[:, 'units_short'] = "%"
             elif macro_indicator_id == "UNRATE":
@@ -90,11 +90,11 @@ if __name__ == "__main__":
             'date': ['2024-10-01'],
             'value': [29719.647]
         }),
-        'REAINTRATREARAT10Y': pd.DataFrame({
+        'DFF': pd.DataFrame({
             'realtime_start': ['2025-03-05'],
             'realtime_end': ['2025-03-05'],
-            'date': ['2025-02-01'],
-            'value': [2.031282]
+            'date': ['2025-04-28'],
+            'value': [4.33]
         }),
         'UNRATE': pd.DataFrame({
             'realtime_start': ['2025-03-05'],
