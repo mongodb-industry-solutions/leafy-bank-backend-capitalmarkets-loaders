@@ -229,15 +229,6 @@ async def backfill_pyfredapi_macroeconomic_data_by_series(request: BackfillSerie
         logging.error(f"Error backfilling PyFredAPI macroeconomic data by series: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/load-recent-financial-news")
-async def load_recent_financial_news():
-    try:
-        loader_service.load_recent_financial_news()
-        return {"message": "Financial News processing completed"}
-    except Exception as e:
-        logging.error(f"Error loading recent financial news: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 ############################
 ## -- LOADER SCHEDULER -- ##
 ############################

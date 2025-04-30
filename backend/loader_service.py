@@ -6,8 +6,6 @@ from loaders.yfinance_tickers_transform import YFinanceTickersTransform
 from loaders.yfinance_tickers_load import YFinanceTickersLoad
 from loaders.yfinance_tickers_cleaner import YFinanceTickersCleaner
 
-from loaders.financial_news_scraper import FinancialNewsScraper
-
 from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
 from loaders.pyfredapi_macroindicators_transform import PyFredAPITransform
 from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
@@ -358,18 +356,3 @@ class LoaderService:
             logger.error(f"Backfill for portfolio performance data failed: {result}")
             
         return result
-
-    def load_recent_financial_news(self):
-        """
-        Loads recent financial news data.
-        """
-        logger.info("Starting financial news processing")
-
-        # Scraper
-        news_scraper = FinancialNewsScraper(
-            collection_name=os.getenv("NEWS_COLLECTION", "financial_news"),
-            scrape_num_articles=int(os.getenv("SCRAPE_NUM_ARTICLES", 1))
-        )
-        news_scraper.run()
-
-        logger.info("Financial News processing completed!")

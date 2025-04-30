@@ -14,8 +14,6 @@ from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
 from loaders.pyfredapi_macroindicators_transform import PyFredAPITransform
 from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
 
-from loaders.financial_news_scraper import FinancialNewsScraper
-
 from loaders.portfolio_performance_load import PorfolioPerformanceLoad
 
 from scheduler import Scheduler
@@ -106,21 +104,6 @@ class LoaderScheduler:
         loader.load(transformed_data)
 
         logger.info("PyFredAPI ETL process completed")
-
-    def run_financial_news_processing(self):
-        """
-        Runs the Financial News processing: Scrape, Embeddings, Sentiment Score.
-        """
-        logger.info("Starting financial news processing")
-
-        # Scraper
-        news_scraper = FinancialNewsScraper(
-            collection_name=os.getenv("NEWS_COLLECTION", "financial_news"),
-            scrape_num_articles=int(os.getenv("SCRAPE_NUM_ARTICLES", 1))
-        )
-        news_scraper.run()
-
-        logger.info("Financial News processing completed!")
 
     def run_insert_portfolio_performance_yesterday_data(self):
         """
