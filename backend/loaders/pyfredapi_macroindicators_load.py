@@ -100,6 +100,7 @@ class PyFredAPILoad(MongoDBConnector):
             except Exception as e:
                 logger.error(f"Error inserting data for series_id {series_id}: {e}")
 
+
 if __name__ == "__main__":
     # Example usage
     sample_data = {
@@ -113,15 +114,15 @@ if __name__ == "__main__":
             'date': [datetime(2024, 10, 1)],
             'value': [29719.647]
         }),
-        'REAINTRATREARAT10Y': pd.DataFrame({
-            'title': ["10-Year Real Interest Rate"],
-            'series_id': ["REAINTRATREARAT10Y"],
-            'frequency': ["Monthly"],
-            'frequency_short': ["M"],
+        'DFF': pd.DataFrame({
+            'title': ["Federal Funds Effective Rate"],
+            'series_id': ["DFF"],
+            'frequency': ["Daily"],
+            'frequency_short': ["D"],
             'units': ["Percent"],
             'units_short': ["%"],
-            'date': [datetime(2025, 2, 1)],
-            'value': [2.031282]
+            'date': [datetime(2025, 4, 28)],
+            'value': [4.33]
         }),
         'UNRATE': pd.DataFrame({
             'title': ["Unemployment Rate"],
