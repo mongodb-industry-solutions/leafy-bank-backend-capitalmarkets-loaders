@@ -11,6 +11,39 @@
 },
 {
   "_id": {
+    "$oid": "67fe7001074966d75101fc14"
+  },
+  "symbol": "HYG",
+  "charts": {
+    "day": "1c5cb8dc-2ebd-488d-9ec7-92f611bc7f92",
+    "week": "39d4c57c-f2a7-4507-9ae3-7711f72aabda",
+    "month": "ed3a6aa1-d4c1-4bdd-8a12-bc64547b1f2d"
+  }
+},
+{
+  "_id": {
+    "$oid": "67fe7001074966d75101fc16"
+  },
+  "symbol": "QQQ",
+  "charts": {
+    "day": "f0877a9b-4881-4b31-a5ef-b5193b557ec9",
+    "week": "c40ce602-eed1-425d-ab3a-5b13557a3cde",
+    "month": "ed470f2b-7d4a-4db7-806c-fcfa4f9b1345"
+  }
+},
+{
+  "_id": {
+    "$oid": "67fe7001074966d75101fc1a"
+  },
+  "symbol": "XLE",
+  "charts": {
+    "day": "46fd5c58-2617-4e36-82d2-8525346c9e6e",
+    "week": "3c51ac82-84c5-4f97-a5e4-999c72c79e93",
+    "month": "859c4024-6805-4bb4-8833-2ba2b3b5f75d"
+  }
+},
+{
+  "_id": {
     "$oid": "67fe7001074966d75101fc12"
   },
   "symbol": "EEM",
@@ -29,39 +62,6 @@
     "day": "ca2ff035-c8c9-451c-aafd-17a5d899f565",
     "week": "2448ee5c-fcd7-42c1-bc83-a4df069ffd5a",
     "month": "ea74b2e3-c2e0-40fa-9dec-206fc96c54d6"
-  }
-},
-{
-  "_id": {
-    "$oid": "67fe7001074966d75101fc14"
-  },
-  "symbol": "HYG",
-  "charts": {
-    "day": "1c5cb8dc-2ebd-488d-9ec7-92f611bc7f92",
-    "week": "39d4c57c-f2a7-4507-9ae3-7711f72aabda",
-    "month": "ed3a6aa1-d4c1-4bdd-8a12-bc64547b1f2d"
-  }
-},
-{
-  "_id": {
-    "$oid": "67fe7001074966d75101fc15"
-  },
-  "symbol": "LQD",
-  "charts": {
-    "day": "dd19123b-d1e7-4c51-bd94-704f024fd4ed",
-    "week": "0cd26f60-ea23-4918-ab35-e71fad313549",
-    "month": "a6d701e2-9b55-4788-9519-3194f38d18c1"
-  }
-},
-{
-  "_id": {
-    "$oid": "67fe7001074966d75101fc16"
-  },
-  "symbol": "QQQ",
-  "charts": {
-    "day": "f0877a9b-4881-4b31-a5ef-b5193b557ec9",
-    "week": "c40ce602-eed1-425d-ab3a-5b13557a3cde",
-    "month": "ed470f2b-7d4a-4db7-806c-fcfa4f9b1345"
   }
 },
 {
@@ -99,12 +99,12 @@
 },
 {
   "_id": {
-    "$oid": "67fe7001074966d75101fc1a"
+    "$oid": "67fe7001074966d75101fc15"
   },
-  "symbol": "XLE",
+  "symbol": "LQD",
   "charts": {
-    "day": "46fd5c58-2617-4e36-82d2-8525346c9e6e",
-    "week": "3c51ac82-84c5-4f97-a5e4-999c72c79e93",
-    "month": "859c4024-6805-4bb4-8833-2ba2b3b5f75d"
+    "day": "dd19123b-d1e7-4c51-bd94-704f024fd4ed",
+    "week": "0cd26f60-ea23-4918-ab35-e71fad313549",
+    "month": "a6d701e2-9b55-4788-9519-3194f38d18c1"
   }
 }]
