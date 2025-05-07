@@ -12,7 +12,6 @@ RUN pip install poetry==1.8.4
 
 # Poetry config & install dependencies
 RUN poetry config virtualenvs.in-project true
-RUN poetry lock --no-update
 RUN poetry install --no-interaction -v --no-cache --no-root
 
 COPY ./backend/ .
