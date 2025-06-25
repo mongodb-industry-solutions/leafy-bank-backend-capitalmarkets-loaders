@@ -12,7 +12,7 @@ from tqdm import tqdm
 from pymongo import UpdateOne
 from loaders.embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+# from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 import os
 from dotenv import load_dotenv
