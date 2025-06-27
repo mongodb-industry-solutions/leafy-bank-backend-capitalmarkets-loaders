@@ -1,0 +1,117 @@
+[{
+  "_id": {
+    "$oid": "685eb5343118883b42674b1d"
+  },
+  "asset_id": "FDUSD",
+  "asset_binance": "FDUSDUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "CryptoCurrency",
+    "CryptoMarkets",
+    "BinanceUS",
+    "Altcoin",
+    "CryptoCurrencyTrading",
+    "CryptoMoonShots",
+    "CryptoTechnology",
+    "Crypto_General"
+  ],
+  "query": "stablecoin"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b1e"
+  },
+  "asset_id": "BTC",
+  "asset_binance": "BTCUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "Bitcoin",
+    "CryptoCurrency"
+  ],
+  "query": "bitcoin OR btc"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b1f"
+  },
+  "asset_id": "ETH",
+  "asset_binance": "ETHUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "Ethereum",
+    "CryptoCurrency"
+  ],
+  "query": "ethereum OR eth"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b20"
+  },
+  "asset_id": "USDC",
+  "asset_binance": "USDCUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "CryptoCurrency"
+  ],
+  "query": "stablecoin"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b21"
+  },
+  "asset_id": "XRP",
+  "asset_binance": "XRPUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "XRP",
+    "CryptoCurrency"
+  ],
+  "query": "xrp"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b22"
+  },
+  "asset_id": "SOL",
+  "asset_binance": "SOLUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "Solana",
+    "CryptoCurrency"
+  ],
+  "query": "solana OR sol"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b23"
+  },
+  "asset_id": "DOGE",
+  "asset_binance": "DOGEUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "dogecoin",
+    "CryptoCurrency"
+  ],
+  "query": "dogecoin OR doge"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b24"
+  },
+  "asset_id": "ADA",
+  "asset_binance": "ADAUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "cardano",
+    "CryptoCurrency"
+  ],
+  "query": "cardano OR ada"
+}]
