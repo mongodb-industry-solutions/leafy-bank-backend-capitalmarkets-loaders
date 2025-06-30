@@ -1,7 +1,9 @@
 import os
 from dotenv import load_dotenv
 import praw
-from datetime import datetime
+from praw.exceptions import PRAWException
+from praw.exceptions import RedditAPIException
+from datetime import datetime, timezone
 import logging
 import time
 from db.mdb import MongoDBConnector
@@ -16,42 +18,51 @@ logger = logging.getLogger(__name__)
 
 class SubredditPrawWrapper(MongoDBConnector):
     def __init__(self, uri=None, database_name: str = None, appname: str = None, 
-                 collection_name: str = os.getenv("SUBREDDIT_MAPPINGS_COLLECTION", "subredditMappings")):
+                 mappings_collection_name: str = os.getenv("SUBREDDIT_MAPPINGS_COLLECTION", "subredditMappings"),
+                 submissions_collection_name: str = os.getenv("SUBREDDIT_SUBMISSIONS_COLLECTION", "subredditSubmissions")):
         """
         Reddit Subreddit data extractor using mappings from MongoDB.
-
-        Args:
-            uri (str, optional): MongoDB URI. Defaults to None.
-            database_name (str, optional): Database name. Defaults to None.
-            appname (str, optional): Application name. Defaults to None.
-            collection_name (str, optional): Collection name for subreddit mappings. 
-                                             Defaults to value from SUBREDDIT_MAPPINGS_COLLECTION env var.
+        Retrieves, augments, and stores data in MongoDB.
         """
         # Load environment variables
         load_dotenv()
         
         # Initialize MongoDB connection
         super().__init__(uri, database_name, appname)
-        self.mappings_collection_name = collection_name
+        self.mappings_collection_name = mappings_collection_name
+        self.submissions_collection_name = submissions_collection_name
         logger.info(f"Using MongoDB collection '{self.mappings_collection_name}' for subreddit mappings")
+        logger.info(f"Using MongoDB collection '{self.submissions_collection_name}' for subreddit submissions")
         
         # Load configuration
         self.config = ConfigLoader()
         self.binance_assets = self.config.get("BINANCE_ASSETS", "").split()
         logger.info(f"Loaded {len(self.binance_assets)} Binance assets from config")
         
-        # Create index on asset_binance field for faster lookups
+        # Create indexes for efficient queries
         self._ensure_indexes()
         
         # Initialize Reddit API client
         self._initialize_reddit_client()
     
     def _ensure_indexes(self):
-        """Ensure necessary indexes exist on the mappings collection."""
+        """Ensure necessary indexes exist on the collections."""
         try:
             # Create index on asset_binance field if it doesn't exist
             self.db[self.mappings_collection_name].create_index("asset_binance")
-            logger.info("Created index on asset_binance field")
+            logger.info("Created index on asset_binance field in mappings collection")
+            
+            # Create indexes on submissions collection
+            # Use compound index on url + asset_id to allow same URL for different assets
+            self.db[self.submissions_collection_name].create_index(
+                [("url", 1), ("asset_id", 1)], 
+                unique=True
+            )
+            self.db[self.submissions_collection_name].create_index("asset_id")
+            self.db[self.submissions_collection_name].create_index("subreddit")
+            self.db[self.submissions_collection_name].create_index("created_at_utc")
+            self.db[self.submissions_collection_name].create_index("extraction_timestamp_utc")
+            logger.info("Created indexes on submissions collection")
         except Exception as e:
             logger.warning(f"Could not create indexes: {e}")
         
@@ -72,15 +83,7 @@ class SubredditPrawWrapper(MongoDBConnector):
             raise
     
     def get_mapping(self, binance_asset: str) -> dict:
-        """
-        Get the subreddit mapping for a specific Binance asset from MongoDB.
-        
-        Args:
-            binance_asset (str): The Binance asset identifier (e.g., "BTCUSDT")
-            
-        Returns:
-            dict: The mapping document or None if not found
-        """
+        """Get the subreddit mapping for a specific Binance asset from MongoDB."""
         try:
             mapping = self.db[self.mappings_collection_name].find_one({"asset_binance": binance_asset})
             if mapping:
@@ -93,16 +96,7 @@ class SubredditPrawWrapper(MongoDBConnector):
             return None
     
     def get_all_mappings(self, only_configured_assets: bool = False) -> list:
-        """
-        Get all subreddit mappings from MongoDB, optionally limited to configured Binance assets.
-        
-        Args:
-            only_configured_assets (bool, optional): If True, only return mappings for assets in config.BINANCE_ASSETS.
-                                                    Defaults to False.
-            
-        Returns:
-            list: List of mapping documents
-        """
+        """Get all subreddit mappings from MongoDB, optionally limited to configured Binance assets."""
         try:
             query = {}
             
@@ -120,21 +114,12 @@ class SubredditPrawWrapper(MongoDBConnector):
             logger.error(f"Error retrieving asset mappings: {e}")
             return []
     
-    def search_subreddit(self, subreddit_name: str, query: str, 
-                        sort: str = "new", time_filter: str = "day", 
-                        limit: int = 10) -> list:
+    def search_subreddit(self, subreddit_name: str, query: str, asset_id: str = None,
+                        binance_asset: str = None, sort: str = "new", 
+                        time_filter: str = "day", limit: int = 10) -> list:
         """
-        Search a specific subreddit for submissions matching the query.
-        
-        Args:
-            subreddit_name (str): Name of the subreddit to search.
-            query (str): Search query.
-            sort (str, optional): Sort order for results. Defaults to "new".
-            time_filter (str, optional): Time filter for search. Defaults to "day".
-            limit (int, optional): Maximum number of submissions to fetch. Defaults to 10.
-            
-        Returns:
-            list: List of submission data dictionaries.
+        Search a specific subreddit for submissions matching the query and store results.
+        Handles cases where subreddits might be unavailable or deleted.
         """
         logger.info(f"Searching subreddit r/{subreddit_name} for query: '{query}'")
         
@@ -143,43 +128,95 @@ class SubredditPrawWrapper(MongoDBConnector):
         for attempt in range(3):
             try:
                 subreddit = self.reddit.subreddit(subreddit_name)
-                submissions_list = list(subreddit.search(
-                    query=query,
-                    sort=sort,
-                    time_filter=time_filter,
-                    limit=limit
-                ))
                 
-                logger.info(f"Found {len(submissions_list)} submissions in r/{subreddit_name} for query '{query}'")
-                
-                for submission in submissions_list:
-                    submission_data = self._process_submission(submission)
-                    submissions_data.append(submission_data)
-                
-                return submissions_data
-                
+                # Try to access subreddit properties and perform search
+                try:
+                    # This will trigger RedditAPIException for banned/non-existent subreddits
+                    submissions_list = list(subreddit.search(
+                        query=query,
+                        sort=sort,
+                        time_filter=time_filter,
+                        limit=limit
+                    ))
+                    
+                    logger.info(f"Found {len(submissions_list)} submissions in r/{subreddit_name} for query '{query}'")
+                    
+                    for submission in submissions_list:
+                        submission_data = self._process_submission(
+                            submission, 
+                            subreddit_name=subreddit_name, 
+                            query=query,
+                            asset_id=asset_id,
+                            binance_asset=binance_asset
+                        )
+                        submissions_data.append(submission_data)
+                    
+                    # Store results in MongoDB
+                    if submissions_data:
+                        self.store_submissions(submissions_data)
+                    
+                    return submissions_data
+                    
+                except RedditAPIException as api_exception:
+                    # Handle specific Reddit API errors with more detailed messages
+                    for error_item in api_exception.items:
+                        if error_item.error_type == "private":
+                            logger.warning(f"WARNING: Subreddit r/{subreddit_name} is private and cannot be accessed")
+                        elif error_item.error_type == "banned":
+                            logger.warning(f"WARNING: Subreddit r/{subreddit_name} has been banned")
+                        elif error_item.error_type == "not_found" or error_item.error_type == "404":
+                            logger.warning(f"WARNING: Subreddit r/{subreddit_name} does not exist")
+                        else:
+                            logger.warning(f"WARNING: Reddit API error when accessing r/{subreddit_name}: {error_item.error_message}")
+                    
+                    # Don't retry for these specific errors
+                    return submissions_data
+                    
+                except PRAWException as praw_exception:
+                    # Handle other PRAW-specific exceptions
+                    logger.warning(f"WARNING: PRAW exception when accessing r/{subreddit_name}: {praw_exception}")
+                    
+                    # For general PRAW exceptions, we might want to retry
+                    if attempt < 2:
+                        logger.info(f"Retrying PRAW operation... ({attempt + 1}/3)")
+                        time.sleep(2)
+                    else:
+                        logger.warning(f"WARNING: Failed to access r/{subreddit_name} after 3 attempts. Continuing with other subreddits.")
+                        return submissions_data
+                    
             except Exception as e:
+                # General error handling for network issues or other problems
                 logger.error(f"Error searching subreddit {subreddit_name}: {e}")
                 if attempt < 2:
                     logger.info(f"Retrying... ({attempt + 1}/3)")
                     time.sleep(2)
                 else:
-                    logger.error(f"Failed to search subreddit {subreddit_name} after 3 attempts.")
+                    logger.warning(f"WARNING: Failed to search subreddit r/{subreddit_name} after 3 attempts. Continuing with other subreddits.")
         
         return submissions_data
     
-    def _process_submission(self, submission) -> dict:
+    def _process_submission(self, submission, subreddit_name: str, query: str, 
+                           asset_id: str = None, binance_asset: str = None) -> dict:
         """
-        Process a submission and extract relevant data.
-        
-        Args:
-            submission: PRAW Submission object
-            
-        Returns:
-            dict: Dictionary containing submission data
+        Process a submission and extract relevant data with enhanced fields for semantic search.
         """
+        # Extract timestamps as datetime objects for MongoDB
         created_date = datetime.fromtimestamp(submission.created)
-        created_utc_date = datetime.fromtimestamp(submission.created_utc)
+        created_utc_date = datetime.fromtimestamp(submission.created_utc, tz=timezone.utc)
+        extraction_timestamp = datetime.now(timezone.utc)
+        
+        # Limit selftext to 2000 characters for the concatenated string
+        limited_selftext = submission.selftext[:2000] if submission.selftext and len(submission.selftext) > 2000 else submission.selftext
+        
+        # Create concatenated string for semantic search
+        submission_string = (
+            f"Title: {submission.title}\n"
+            f"Selftext: {limited_selftext}\n"
+            f"Subreddit: r/{subreddit_name}\n"
+            f"URL: {submission.url}\n"
+            f"Related to: {asset_id or 'Unknown'}\n"
+            f"Subreddit query performed: '{query}'"
+        )
         
         submission_data = {
             "subreddit": str(submission.subreddit),
@@ -188,8 +225,8 @@ class SubredditPrawWrapper(MongoDBConnector):
             "author_fullname": submission.author_fullname if hasattr(submission, 'author_fullname') else None,
             "author_premium": submission.author_premium if hasattr(submission, 'author_premium') else None,
             "author_is_blocked": submission.author_is_blocked if hasattr(submission, 'author_is_blocked') else None,
-            "created_at": created_date.strftime('%Y-%m-%d %H:%M:%S'),
-            "created_at_utc": created_utc_date.strftime('%Y-%m-%d %H:%M:%S'),
+            "created_at": created_date,  # Store as datetime object
+            "created_at_utc": created_utc_date,  # Store as datetime object with timezone
             "domain": submission.domain,
             "name": submission.name,
             "score": submission.score,
@@ -197,25 +234,66 @@ class SubredditPrawWrapper(MongoDBConnector):
             "selftext": submission.selftext,
             "num_comments": submission.num_comments,
             "ups": submission.ups,
-            "downs": submission.downs
+            "downs": submission.downs,
+            # Enhanced fields for semantic search
+            "submission_string": submission_string,
+            "extraction_timestamp_utc": extraction_timestamp,
+            "asset_id": asset_id,
+            "binance_asset": binance_asset,
+            "query": query
         }
         
         logger.debug(f"Processed submission: {submission.title}")
         return submission_data
     
+    def store_submissions(self, submissions: list) -> int:
+        """
+        Store submission data in MongoDB.
+        
+        Args:
+            submissions (list): List of submission data dictionaries
+            
+        Returns:
+            int: Number of submissions stored
+        """
+        if not submissions:
+            logger.info("No submissions to store")
+            return 0
+        
+        stored_count = 0
+        updated_count = 0
+        
+        for submission in submissions:
+            try:
+                # Use URL + asset_id as a compound unique identifier
+                # This allows the same URL to exist for different assets
+                query = {
+                    "url": submission["url"],
+                    "asset_id": submission["asset_id"]
+                }
+                update = {"$set": submission}
+                result = self.db[self.submissions_collection_name].update_one(
+                    query, update, upsert=True
+                )
+                
+                if result.upserted_id:
+                    stored_count += 1
+                    logger.debug(f"Stored new submission for {submission['asset_id']}: {submission['title']}")
+                elif result.modified_count > 0:
+                    updated_count += 1
+                    logger.debug(f"Updated existing submission for {submission['asset_id']}: {submission['title']}")
+                
+            except Exception as e:
+                logger.error(f"Error storing submission {submission.get('title', 'Unknown')}: {e}")
+        
+        logger.info(f"Stored {stored_count} new submissions and updated {updated_count} existing submissions in MongoDB")
+        return stored_count
+    
     def search_for_asset(self, binance_asset: str, sort: str = "new", 
                         time_filter: str = "day", limit: int = 10) -> dict:
         """
-        Search for content related to a specific Binance asset across its mapped subreddits.
-        
-        Args:
-            binance_asset (str): The Binance asset identifier (e.g., "BTCUSDT").
-            sort (str, optional): Sort order for results. Defaults to "new".
-            time_filter (str, optional): Time filter for search. Defaults to "day".
-            limit (int, optional): Maximum number of submissions per subreddit. Defaults to 10.
-            
-        Returns:
-            dict: Dictionary with subreddit names as keys and lists of submission data as values.
+        Search for content related to a specific Binance asset across its mapped subreddits
+        and store results in MongoDB.
         """
         mapping = self.get_mapping(binance_asset)
         if not mapping:
@@ -224,14 +302,17 @@ class SubredditPrawWrapper(MongoDBConnector):
         
         subreddits = mapping.get("subreddits", [])
         query = mapping.get("query", binance_asset)
+        asset_id = mapping.get("asset_id")
         
-        logger.info(f"Searching for {binance_asset} with query '{query}' across {len(subreddits)} subreddits")
+        logger.info(f"Searching for {binance_asset} (asset_id: {asset_id}) with query '{query}' across {len(subreddits)} subreddits")
         
         results = {}
         for subreddit in subreddits:
             submissions = self.search_subreddit(
                 subreddit_name=subreddit,
                 query=query,
+                asset_id=asset_id,
+                binance_asset=binance_asset,
                 sort=sort,
                 time_filter=time_filter,
                 limit=limit
@@ -247,17 +328,8 @@ class SubredditPrawWrapper(MongoDBConnector):
     def search_all_assets(self, sort: str = "new", time_filter: str = "day", 
                          limit: int = 10, only_configured_assets: bool = True) -> dict:
         """
-        Search for content related to all assets in the database, optionally limited to configured assets.
-        
-        Args:
-            sort (str, optional): Sort order for results. Defaults to "new".
-            time_filter (str, optional): Time filter for search. Defaults to "day".
-            limit (int, optional): Maximum number of submissions per subreddit. Defaults to 10.
-            only_configured_assets (bool, optional): If True, only search for assets in config.BINANCE_ASSETS.
-                                                    Defaults to True.
-            
-        Returns:
-            dict: Dictionary with Binance asset identifiers as keys and search results as values.
+        Search for content related to all assets in the database, optionally limited to configured assets,
+        and store results in MongoDB.
         """
         # If only searching configured assets, we can use the list directly
         if only_configured_assets:
@@ -285,42 +357,27 @@ class SubredditPrawWrapper(MongoDBConnector):
                 results[binance_asset] = asset_results
         
         return results
-    
-    def print_submission_details(self, submission_data: dict):
-        """
-        Print details of a submission in a formatted way.
-        
-        Args:
-            submission_data (dict): Submission data dictionary.
-        """
-        print("####### Submission Details ###########")
-        print("#######################################")
-        print(f"Subreddit: {submission_data['subreddit']}")
-        print(f"Title: {submission_data['title']}")
-        print(f"Author: {submission_data['author']}")
-        print(f"Author Full Name: {submission_data['author_fullname']}")
-        print(f"Author is Premium?: {submission_data['author_premium']}")
-        print(f"Author is Blocked?: {submission_data['author_is_blocked']}")
-        print(f"Created At: {submission_data['created_at']}")
-        print(f"Created At (UTC): {submission_data['created_at_utc']}")
-        print(f"Domain: {submission_data['domain']}")
-        print(f"Name: {submission_data['name']}")
-        print(f"Score: {submission_data['score']}")
-        print(f"URL: {submission_data['url']}")
-        print(f"Selftext: {submission_data['selftext']}")
-        print("-" * 80)
-        print(f"Comments: {submission_data['num_comments']}")
-        print(f"Ups: {submission_data['ups']}")
-        print(f"Downs: {submission_data['downs']}")
 
 
 if __name__ == "__main__":
-    # Example usage
+    # Initialize the wrapper
     reddit_wrapper = SubredditPrawWrapper()
     
-    # Example 3: Search all configured Binance assets
-    print("\n===== Example 3: Summary of all configured Binance asset searches =====")
-    all_results = reddit_wrapper.search_all_assets(limit=3)
-    for binance_asset, results in all_results.items():
-        total_subs = sum(len(subs) for subs in results.values())
-        print(f"{binance_asset}: Found {total_subs} submissions across {len(results)} subreddits")
+    # Execute data extraction and storage for all configured Binance assets
+    logger.info("Starting Reddit data extraction and storage for configured Binance assets")
+    
+    # Search all assets and store results (this will automatically store in MongoDB)
+    results = reddit_wrapper.search_all_assets(
+        sort="new",
+        time_filter="day",
+        limit=10,  # Fetch up to 10 submissions per subreddit
+        only_configured_assets=True
+    )
+    
+    # Log summary information
+    total_assets = len(results)
+    total_submissions = sum(sum(len(subs) for subs in asset_results.values()) for asset_results in results.values())
+    
+    logger.info(f"Data extraction complete.")
+    logger.info(f"Processed {total_assets} assets with a total of {total_submissions} submissions.")
+    logger.info(f"All data has been stored in the '{reddit_wrapper.submissions_collection_name}' MongoDB collection.")

@@ -7,16 +7,13 @@
   "asset_type": "crypto",
   "subreddits": [
     "investing",
+    "StableCoins",
     "CryptoCurrency",
     "CryptoMarkets",
-    "BinanceUS",
     "Altcoin",
-    "CryptoCurrencyTrading",
-    "CryptoMoonShots",
-    "CryptoTechnology",
-    "Crypto_General"
+    "CryptoCurrencyTrading"
   ],
-  "query": "stablecoin"
+  "query": "stablecoin OR stable coin"
 },
 {
   "_id": {
@@ -28,7 +25,8 @@
   "subreddits": [
     "investing",
     "Bitcoin",
-    "CryptoCurrency"
+    "CryptoCurrency",
+    "CryptoMarkets"
   ],
   "query": "bitcoin OR btc"
 },
@@ -42,7 +40,8 @@
   "subreddits": [
     "investing",
     "Ethereum",
-    "CryptoCurrency"
+    "CryptoCurrency",
+    "CryptoMarkets"
   ],
   "query": "ethereum OR eth"
 },
@@ -55,9 +54,13 @@
   "asset_type": "crypto",
   "subreddits": [
     "investing",
-    "CryptoCurrency"
+    "StableCoins",
+    "CryptoCurrency",
+    "CryptoMarkets",
+    "Altcoin",
+    "CryptoCurrencyTrading"
   ],
-  "query": "stablecoin"
+  "query": "stablecoin OR stable coin"
 },
 {
   "_id": {
@@ -69,7 +72,8 @@
   "subreddits": [
     "investing",
     "XRP",
-    "CryptoCurrency"
+    "CryptoCurrency",
+    "CryptoMarkets"
   ],
   "query": "xrp"
 },
@@ -83,7 +87,8 @@
   "subreddits": [
     "investing",
     "Solana",
-    "CryptoCurrency"
+    "CryptoCurrency",
+    "CryptoMarkets"
   ],
   "query": "solana OR sol"
 },
@@ -97,7 +102,8 @@
   "subreddits": [
     "investing",
     "dogecoin",
-    "CryptoCurrency"
+    "CryptoCurrency",
+    "CryptoMarkets"
   ],
   "query": "dogecoin OR doge"
 },
@@ -111,7 +117,8 @@
   "subreddits": [
     "investing",
     "cardano",
-    "CryptoCurrency"
+    "CryptoCurrency",
+    "CryptoMarkets"
   ],
   "query": "cardano OR ada"
 }]
