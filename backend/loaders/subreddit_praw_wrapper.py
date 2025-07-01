@@ -206,8 +206,8 @@ class SubredditPrawWrapper(MongoDBConnector):
         created_utc_date = datetime.fromtimestamp(submission.created_utc, tz=timezone.utc)
         extraction_timestamp = datetime.now(timezone.utc)
         
-        # Limit selftext to 2000 characters for the concatenated string
-        limited_selftext = submission.selftext[:2000] if submission.selftext and len(submission.selftext) > 2000 else submission.selftext
+        # Limit selftext to 1000 characters
+        limited_selftext = submission.selftext[:1000] if submission.selftext and len(submission.selftext) > 1000 else submission.selftext
         
         # Extract top comments if available
         comments_data = []
@@ -229,6 +229,7 @@ class SubredditPrawWrapper(MongoDBConnector):
                 for comment in recent_comments:
                     # Extract comment data with proper timestamp
                     comment_created_date = datetime.fromtimestamp(comment.created_utc, tz=timezone.utc)
+                    # Limit comment body to 250 characters
                     comment_text = comment.body[:250] if comment.body and len(comment.body) > 250 else comment.body
                     
                     comment_data = {
