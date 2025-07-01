@@ -196,9 +196,10 @@ class SubredditPrawWrapper(MongoDBConnector):
         return submissions_data
     
     def _process_submission(self, submission, subreddit_name: str, query: str, 
-                           asset_id: str = None, binance_asset: str = None) -> dict:
+                       asset_id: str = None, binance_asset: str = None) -> dict:
         """
         Process a submission and extract relevant data with enhanced fields for semantic search.
+        Also captures up to 3 most recent comments, if available.
         """
         # Extract timestamps as datetime objects for MongoDB
         created_date = datetime.fromtimestamp(submission.created)
@@ -208,15 +209,58 @@ class SubredditPrawWrapper(MongoDBConnector):
         # Limit selftext to 2000 characters for the concatenated string
         limited_selftext = submission.selftext[:2000] if submission.selftext and len(submission.selftext) > 2000 else submission.selftext
         
-        # Create concatenated string for semantic search
-        submission_string = (
-            f"Title: {submission.title}\n"
-            f"Selftext: {limited_selftext}\n"
-            f"Subreddit: r/{subreddit_name}\n"
-            f"URL: {submission.url}\n"
-            f"Related to: {asset_id or 'Unknown'}\n"
-            f"Subreddit query performed: '{query}'"
-        )
+        # Extract top comments if available
+        comments_data = []
+        if submission.num_comments > 0:
+            try:
+                # Ensure comment tree is loaded and get the comments
+                submission.comments.replace_more(limit=0)  # Don't fetch MoreComments
+                
+                # Get all comments as a flattened list
+                all_comments = submission.comments.list()
+                
+                # Sort by created_utc to get the most recent ones
+                # Reverse=True means newest first
+                all_comments.sort(key=lambda comment: comment.created_utc, reverse=True)
+                
+                # Take the 3 most recent comments
+                recent_comments = all_comments[:3]
+                
+                for comment in recent_comments:
+                    # Extract comment data with proper timestamp
+                    comment_created_date = datetime.fromtimestamp(comment.created_utc, tz=timezone.utc)
+                    comment_text = comment.body[:250] if comment.body and len(comment.body) > 250 else comment.body
+                    
+                    comment_data = {
+                        "id": comment.id,
+                        "author": str(comment.author) if comment.author else "[deleted]",
+                        "body": comment_text,  # Limited to 250 chars
+                        "score": comment.score,
+                        "created_at_utc": comment_created_date
+                    }
+                    comments_data.append(comment_data)
+                
+                logger.debug(f"Extracted {len(comments_data)} comments for submission: {submission.title}")
+            except Exception as e:
+                logger.warning(f"Error extracting comments for submission {submission.id}: {e}")
+        
+        # Create structured dictionary for semantic search instead of string
+        submission_dict = {
+            "title": submission.title,
+            "selftext": limited_selftext,
+            "subreddit": f"r/{subreddit_name}",
+            "url": submission.url,
+            "asset_id": asset_id or "Unknown",
+            "query": query,
+            "comments": [
+                {
+                    "author": comment["author"],
+                    "body": comment["body"],
+                    "created_at_utc": comment["created_at_utc"]
+                } 
+                for comment in comments_data
+            ]
+        }
         
         submission_data = {
             "subreddit": str(submission.subreddit),
@@ -236,11 +280,13 @@ class SubredditPrawWrapper(MongoDBConnector):
             "ups": submission.ups,
             "downs": submission.downs,
             # Enhanced fields for semantic search
-            "submission_string": submission_string,
+            "submission_dict": submission_dict,  # Store structured data instead of string
             "extraction_timestamp_utc": extraction_timestamp,
             "asset_id": asset_id,
             "binance_asset": binance_asset,
-            "query": query
+            "query": query,
+            # Add the extracted comments
+            "comments": comments_data
         }
         
         logger.debug(f"Processed submission: {submission.title}")
