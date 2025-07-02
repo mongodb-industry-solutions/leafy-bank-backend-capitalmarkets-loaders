@@ -2,8 +2,8 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from db.mdb import MongoDBConnector
-from config.config_loader import ConfigLoader
+from loaders.db.mdb import MongoDBConnector
+from loaders.config.config_loader import ConfigLoader
 
 # Configure logging
 logging.basicConfig(

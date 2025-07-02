@@ -11,6 +11,11 @@ from loaders.binance_api_transform import BinanceAPITransform
 from loaders.binance_api_load import BinanceAPILoad
 from loaders.binance_api_cleaner import BinanceAPICleaner
 
+from loaders.subreddit_praw_wrapper import SubredditPrawWrapper
+from loaders.subreddit_praw_embedder import SubredditPrawEmbedder
+from loaders.subreddit_praw_sentiment import SubredditPrawSentiment
+from loaders.subreddit_praw_cleaner import SubredditPrawCleaner
+
 from loaders.financial_news_scraper import FinancialNewsScraper
 
 from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
@@ -55,6 +60,7 @@ class LoaderService:
         14. Backfill PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
         15. Backfill Portfolio Performance data for a given date range. (backfill_portfolio_performance_data)
         16. Load recent financial news data. (load_recent_financial_news)
+        17. Load recent Subreddit PRAW data. (load_recent_subreddit_praw_data)
         """ 
         self.config_loader = ConfigLoader()
         self.utc = timezone.utc
@@ -546,3 +552,70 @@ class LoaderService:
         news_scraper.run()
 
         logger.info("Financial News processing completed!")
+
+    ####################################
+    # SUBREDDIT PRAW
+    ####################################
+
+    def load_recent_subreddit_praw_data(self):
+        """
+        Loads recent Subreddit PRAW data.
+        """
+        logger.info("Starting Subreddit PRAW data processing")
+
+        # Wrapper
+        praw_wrapper = SubredditPrawWrapper()
+        praw_wrapper.run()
+
+        # Embedder
+        praw_embedder = SubredditPrawEmbedder()
+        praw_embedder.run()
+
+        # Sentiment Analysis
+        praw_sentiment = SubredditPrawSentiment()
+        praw_sentiment.run()
+
+        # Cleaner
+        praw_cleaner = SubredditPrawCleaner()
+        praw_cleaner.run()
+
+        logger.info("Subreddit PRAW data processing completed!")
+
+    def subreddit_praw_embedder_only(self):
+        """
+        Runs only the Subreddit PRAW embedder to process data.
+        This is useful for re-embedding existing data without re-fetching it.
+        """
+        logger.info("Starting Subreddit PRAW embedder only")
+
+        # Embedder
+        praw_embedder = SubredditPrawEmbedder()
+        praw_embedder.run()
+
+        logger.info("Subreddit PRAW embedder only completed!")
+
+    def subreddit_praw_sentiment_only(self):
+        """
+        Runs only the Subreddit PRAW sentiment analysis to process data.
+        This is useful for re-analyzing existing data without re-fetching it.
+        """
+        logger.info("Starting Subreddit PRAW sentiment analysis only")
+
+        # Sentiment Analysis
+        praw_sentiment = SubredditPrawSentiment()
+        praw_sentiment.run()
+
+        logger.info("Subreddit PRAW sentiment analysis only completed!")
+
+    def subreddit_praw_cleaner_only(self):
+        """
+        Runs only the Subreddit PRAW cleaner to process data.
+        This is useful for cleaning existing data without re-fetching or re-analyzing it.
+        """
+        logger.info("Starting Subreddit PRAW cleaner only")
+
+        # Cleaner
+        praw_cleaner = SubredditPrawCleaner()
+        praw_cleaner.run()
+
+        logger.info("Subreddit PRAW cleaner only completed!")

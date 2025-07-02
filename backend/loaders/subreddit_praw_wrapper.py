@@ -6,8 +6,8 @@ from praw.exceptions import RedditAPIException
 from datetime import datetime, timezone
 import logging
 import time
-from db.mdb import MongoDBConnector
-from config.config_loader import ConfigLoader
+from loaders.db.mdb import MongoDBConnector
+from loaders.config.config_loader import ConfigLoader
 
 # Configure logging
 logging.basicConfig(
@@ -404,27 +404,33 @@ class SubredditPrawWrapper(MongoDBConnector):
                 results[binance_asset] = asset_results
         
         return results
+    
+    def run(self, sort: str = "new", time_filter: str = "day", limit: int = 10, only_configured_assets: bool = True):
+        """
+        Runs the Reddit data wrapper process.
 
+        Args:
+            sort (str): Sorting method for submissions (default: "new")
+            time_filter (str): Time filter for submissions (default: "day")
+            limit (int): Maximum number of submissions to fetch per subreddit (default: 10)
+            only_configured_assets (bool): If True, only search configured Binance assets (default: True)
+
+        """
+        # Execute data extraction and storage for all configured Binance assets
+        logger.info("Starting Reddit data extraction and storage for configured Binance assets")
+        
+        # Search all assets and store results (this will automatically store in MongoDB)
+        results = self.search_all_assets(sort, time_filter, limit, only_configured_assets)
+        
+        # Log summary information
+        total_assets = len(results)
+        total_submissions = sum(sum(len(subs) for subs in asset_results.values()) for asset_results in results.values())
+        
+        logger.info(f"Data extraction complete.")
+        logger.info(f"Processed {total_assets} assets with a total of {total_submissions} submissions.")
+        logger.info(f"All data has been stored in the '{self.submissions_collection_name}' MongoDB collection.")
 
 if __name__ == "__main__":
-    # Initialize the wrapper
-    reddit_wrapper = SubredditPrawWrapper()
-    
-    # Execute data extraction and storage for all configured Binance assets
-    logger.info("Starting Reddit data extraction and storage for configured Binance assets")
-    
-    # Search all assets and store results (this will automatically store in MongoDB)
-    results = reddit_wrapper.search_all_assets(
-        sort="new",
-        time_filter="day",
-        limit=10,  # Fetch up to 10 submissions per subreddit
-        only_configured_assets=True
-    )
-    
-    # Log summary information
-    total_assets = len(results)
-    total_submissions = sum(sum(len(subs) for subs in asset_results.values()) for asset_results in results.values())
-    
-    logger.info(f"Data extraction complete.")
-    logger.info(f"Processed {total_assets} assets with a total of {total_submissions} submissions.")
-    logger.info(f"All data has been stored in the '{reddit_wrapper.submissions_collection_name}' MongoDB collection.")
+    # Run the Subreddit PRAW wrapper to extract and store data
+    wrapper = SubredditPrawWrapper()
+    wrapper.run()

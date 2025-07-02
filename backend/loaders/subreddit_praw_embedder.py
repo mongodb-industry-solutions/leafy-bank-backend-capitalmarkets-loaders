@@ -3,8 +3,8 @@ from dotenv import load_dotenv
 import logging
 from pymongo import UpdateOne
 from tqdm import tqdm
-from db.mdb import MongoDBConnector
-from embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
+from loaders.db.mdb import MongoDBConnector
+from loaders.embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
 
 # Configure logging
 logging.basicConfig(
@@ -302,9 +302,15 @@ class SubredditPrawEmbedder(MongoDBConnector):
         
         # Generate embeddings
         stats = self.generate_embeddings(batch_size, max_documents, progress_update_frequency)
+
+        logger.info("\nEmbedding Generation Statistics:")
+        logger.info(f"Total documents processed: {stats['total_processed']}")
+        logger.info(f"Successfully embedded: {stats['successful']}")
+        logger.info(f"Failed to embed: {stats['failed']}")
+        logger.info(f"API requests made: {stats['api_requests']}")
+        logger.info(f"Estimated tokens processed: {stats['estimated_tokens']}")
         
         logger.info("Reddit submission embeddings generation complete")
-        return stats
 
 
 if __name__ == "__main__":
@@ -312,12 +318,4 @@ if __name__ == "__main__":
     embedder = SubredditPrawEmbedder()
     
     # Run the embedder
-    stats = embedder.run()
-    
-    # Print statistics
-    print("\nEmbedding Generation Statistics:")
-    print(f"Total documents processed: {stats['total_processed']}")
-    print(f"Successfully embedded: {stats['successful']}")
-    print(f"Failed to embed: {stats['failed']}")
-    print(f"API requests made: {stats['api_requests']}")
-    print(f"Estimated tokens processed: {stats['estimated_tokens']}")
+    embedder.run()

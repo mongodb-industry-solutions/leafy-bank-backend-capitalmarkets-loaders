@@ -321,6 +321,46 @@ async def load_recent_financial_news():
     except Exception as e:
         logging.error(f"Error loading recent financial news: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+####################################
+# PRAW WRAPPER PROCESSING
+####################################
+
+@app.post("/load-recent-subreddit-praw-data")
+async def load_recent_subreddit_praw_data():
+    try:
+        loader_service.load_recent_subreddit_praw_data()
+        return {"message": "Subreddit PRAW data processing completed!"}
+    except Exception as e:
+        logging.error(f"Error loading Subreddit PRAW data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/subreddit-praw-embedder-only")
+async def subreddit_praw_embedder_only():
+    try:
+        loader_service.subreddit_praw_embedder_only()
+        return {"message": "Subreddit PRAW embedder only process completed!"}
+    except Exception as e:
+        logging.error(f"Error performing Subreddit PRAW embedder only: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/subreddit-praw-sentiment-only")
+async def subreddit_praw_sentiment_only():
+    try:
+        loader_service.subreddit_praw_sentiment_only()
+        return {"message": "Subreddit PRAW sentiment analysis process completed!"}
+    except Exception as e:
+        logging.error(f"Error performing Subreddit PRAW sentiment analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/subreddit-praw-cleaner-only")
+async def subreddit_praw_cleaner_only():
+    try:
+        loader_service.subreddit_praw_cleaner_only()
+        return {"message": "Subreddit PRAW cleaner only process completed!"}
+    except Exception as e:
+        logging.error(f"Error performing Subreddit PRAW cleaner only: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 ############################
 ## -- LOADER SCHEDULER -- ##
@@ -354,7 +394,7 @@ async def scheduler_overview():
                     elif job["function"] == "#ic_data_etl(..)":
                         job["function"] = "run_pyfredapi_macroeconomic_data_etl"
                     elif job["function"] == "#_processing(..)":
-                        job["function"] = "run_financial_news_processing"
+                        job["function"] = "run_subreddit_praw_data_processing"
                     elif job["function"] == "#terday_data(..)":
                         job["function"] = "run_insert_portfolio_performance_yesterday_data"
                     if job["function"] == "#to_data_etl(..)":
@@ -379,7 +419,7 @@ async def scheduler_overview():
                     elif job["function"] == "#ic_data_etl(..)":
                         job["function"] = "run_pyfredapi_macroeconomic_data_etl"
                     elif job["function"] == "#_processing(..)":
-                        job["function"] = "run_financial_news_processing"
+                        job["function"] = "run_subreddit_praw_data_processing"
                     elif job["function"] == "#terday_data(..)":
                         job["function"] = "run_insert_portfolio_performance_yesterday_data"
                     if job["function"] == "#to_data_etl(..)":

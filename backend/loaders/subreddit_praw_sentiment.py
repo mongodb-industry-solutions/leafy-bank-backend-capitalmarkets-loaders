@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 import logging
 from tqdm import tqdm
 from pymongo import UpdateOne
-from db.mdb import MongoDBConnector
+from loaders.db.mdb import MongoDBConnector
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 # Configure logging
@@ -32,7 +32,7 @@ class SubredditPrawSentiment(MongoDBConnector):
         logger.info("Loading FinBERT model for sentiment analysis...")
         self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         self.model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-        self.sentiment_pipeline = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer)
+        self.sentiment_pipeline = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer, top_k=None)
         logger.info("FinBERT model loaded successfully")
         
         # Counters for tracking
@@ -368,9 +368,14 @@ class SubredditPrawSentiment(MongoDBConnector):
         
         # Generate sentiment scores
         stats = self.generate_sentiment_scores(batch_size, max_documents, progress_update_frequency)
+
+        logger.info("\nSentiment Analysis Statistics:")
+        logger.info(f"Total documents processed: {stats['total_processed']}")
+        logger.info(f"Successfully analyzed: {stats['successful']}")
+        logger.info(f"Failed to analyze: {stats['failed']}")
+        logger.info(f"API requests made: {stats['api_requests']}") 
         
         logger.info("Reddit submission sentiment analysis complete")
-        return stats
 
 
 if __name__ == "__main__":
@@ -378,11 +383,4 @@ if __name__ == "__main__":
     sentiment_analyzer = SubredditPrawSentiment()
     
     # Run the sentiment analyzer
-    stats = sentiment_analyzer.run()
-    
-    # Print statistics
-    print("\nSentiment Analysis Statistics:")
-    print(f"Total documents processed: {stats['total_processed']}")
-    print(f"Successfully analyzed: {stats['successful']}")
-    print(f"Failed to analyze: {stats['failed']}")
-    print(f"API requests made: {stats['api_requests']}")
+    sentiment_analyzer.run()
