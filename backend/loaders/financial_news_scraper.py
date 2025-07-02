@@ -12,7 +12,7 @@ from tqdm import tqdm
 from pymongo import UpdateOne
 from loaders.embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+# from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 import os
 from dotenv import load_dotenv
@@ -61,7 +61,7 @@ class FinancialNewsScraper(GenericScraper):
         self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         self.model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
         # Initialize the sentiment analysis pipeline
-        self.sentiment_pipeline = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer, return_all_scores=True)
+        self.sentiment_pipeline = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer, top_k=None)
 
     @staticmethod
     def extract_article(card, ticker):

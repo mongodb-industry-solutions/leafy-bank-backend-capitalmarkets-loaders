@@ -82,9 +82,18 @@ class TimeSeriesCollectionCreator(MongoDBConnector):
 
 
 if __name__ == "__main__":
-    market_data = TimeSeriesCollectionCreator()
-    r = market_data.create_timeseries_collection(
-        collection_name=os.getenv("YFINANCE_TIMESERIES_COLLECTION"),
+    # market_data = TimeSeriesCollectionCreator()
+    # r = market_data.create_timeseries_collection(
+    #     collection_name=os.getenv("YFINANCE_TIMESERIES_COLLECTION"),
+    #     time_field="timestamp",
+    #     meta_field="symbol",
+    #     granularity="minutes"
+    # )
+    # logger.info(r)
+
+    crypto_data = TimeSeriesCollectionCreator()
+    r = crypto_data.create_timeseries_collection(
+        collection_name=os.getenv("BINANCE_TIMESERIES_COLLECTION"),
         time_field="timestamp",
         meta_field="symbol",
         granularity="minutes"

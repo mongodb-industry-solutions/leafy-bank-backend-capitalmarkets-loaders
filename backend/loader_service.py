@@ -6,6 +6,16 @@ from loaders.yfinance_tickers_transform import YFinanceTickersTransform
 from loaders.yfinance_tickers_load import YFinanceTickersLoad
 from loaders.yfinance_tickers_cleaner import YFinanceTickersCleaner
 
+from loaders.binance_api_extract import BinanceAPIExtract
+from loaders.binance_api_transform import BinanceAPITransform
+from loaders.binance_api_load import BinanceAPILoad
+from loaders.binance_api_cleaner import BinanceAPICleaner
+
+from loaders.subreddit_praw_wrapper import SubredditPrawWrapper
+from loaders.subreddit_praw_embedder import SubredditPrawEmbedder
+from loaders.subreddit_praw_sentiment import SubredditPrawSentiment
+from loaders.subreddit_praw_cleaner import SubredditPrawCleaner
+
 from loaders.financial_news_scraper import FinancialNewsScraper
 
 from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
@@ -36,20 +46,29 @@ class LoaderService:
         This service provides methods for:
         1. Load Yahoo Finance market data for a given date. (load_yfinance_market_data)
         2. Load Yahoo Finance market data for a given date and symbol. (load_yfinance_market_data_by_symbol)
-        3. Load PyFredAPI macroeconomic data for a given date. (load_pyfredapi_macroeconomic_data)
-        4. Load PyFredAPI macroeconomic data for a given date and series id. (load_pyfredapi_macroeconomic_data_by_series)
-        5. Load Portfolio Performance yesterday data. (insert_portfolio_performance_yesterday_data)
-        6. Load Portfolio Performance data for a given date. (insert_portfolio_performance_data_for_date)
-        7. Backfill Yahoo Finance market data for a given date range. (backfill_yfinance_market_data)
-        8. Backfill Yahoo Finance market data for a given date range and symbol. (backfill_yfinance_market_data_by_symbol)
-        9. Backfill PyFredAPI macroeconomic data for a given date range. (backfill_pyfredapi_macroeconomic_data)
-        10. Backfill PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
-        11. Backfill Portfolio Performance data for a given date range. (backfill_portfolio_performance_data)
-        12. Load recent financial news data. (load_recent_financial_news)
+        3. Load Binance API crypto data for a given date. (load_binance_api_crypto_data)
+        4. Load Binance API crypto data for a given date and symbol. (load_binance_api_crypto_data_by_symbol)
+        5. Load PyFredAPI macroeconomic data for a given date. (load_pyfredapi_macroeconomic_data)
+        6. Load PyFredAPI macroeconomic data for a given date and series id. (load_pyfredapi_macroeconomic_data_by_series)
+        7. Load Portfolio Performance yesterday data. (insert_portfolio_performance_yesterday_data)
+        8. Load Portfolio Performance data for a given date. (insert_portfolio_performance_data_for_date)
+        9. Backfill Yahoo Finance market data for a given date range. (backfill_yfinance_market_data)
+        10. Backfill Yahoo Finance market data for a given date range and symbol. (backfill_yfinance_market_data_by_symbol)
+        11. Backfill Binance API crypto data for a given date range. (backfill_binance_api_crypto_data)
+        12. Backfill Binance API crypto data for a given date range and symbol. (backfill_binance_api_crypto_data_by_symbol)
+        13. Backfill PyFredAPI macroeconomic data for a given date range. (backfill_pyfredapi_macroeconomic_data)
+        14. Backfill PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
+        15. Backfill Portfolio Performance data for a given date range. (backfill_portfolio_performance_data)
+        16. Load recent financial news data. (load_recent_financial_news)
+        17. Load recent Subreddit PRAW data. (load_recent_subreddit_praw_data)
         """ 
         self.config_loader = ConfigLoader()
         self.utc = timezone.utc
         logger.info("LoaderService initialized")
+
+    ####################################
+    # YFINANCE
+    ####################################
 
     def load_yfinance_market_data(self, date_str: str):
         """
@@ -134,6 +153,105 @@ class LoaderService:
 
         logger.info(f"Yahoo Finance market data loading process completed for symbol: {symbol}")
 
+    ####################################
+    # BINANCE API
+    ####################################
+
+    def load_binance_api_crypto_data(self, date_str: str):
+        """
+        Loads Binance API crypto data for the given date.
+
+        :param date_str: Date in "%Y%m%d" format.
+        """
+        logger.info("Starting Binance API crypto data loading process")
+
+        # Validate the date is not current date or future date
+        current_date = datetime.now(self.utc).strftime("%Y%m%d")
+        if date_str >= current_date:
+            raise ValueError("date_str cannot be the current date or a future date")
+
+        # Date string for end date
+        start_date_str = date_str
+
+        # Define date range for extraction
+        start_date = datetime.strptime(start_date_str, "%Y%m%d").replace(tzinfo=self.utc)
+        end_date = start_date + timedelta(days=1)
+        end_date_str = end_date.strftime("%Y%m%d")
+
+        # Extract Crypto Data
+        extractor = BinanceAPIExtract(start_date=start_date_str, end_date=end_date_str)
+        extracted_data = extractor.extract()
+
+        # Transform Crypto Data
+        transformer = BinanceAPITransform()
+        transformed_data = {}
+        
+        # Access the 'crypto' key first to get the dictionary of symbols
+        if 'crypto' in extracted_data and extracted_data['crypto']:
+            for symbol, df in extracted_data['crypto'].items():
+                try:
+                    transformed_df = transformer.transform(symbol=symbol, df=df)
+                    transformed_data[symbol] = transformed_df
+                except Exception as e:
+                    logger.error(f"Error transforming {symbol}: {e}")
+        else:
+            logger.warning("No crypto data was extracted")
+
+        # Load Crypto Data
+        if transformed_data:
+            loader = BinanceAPILoad()
+            loader.load(transformed_data, start_date=start_date_str)
+
+            # Clean up Crypto Data older than 60 days
+            cleaner = BinanceAPICleaner()
+            cleaner.run()
+        else:
+            logger.warning("No data to load after transformation")
+
+        logger.info("Binance API crypto data loading process completed")
+
+    def load_binance_api_crypto_data_by_symbol(self, date_str: str, symbol: str):
+        """
+        Loads Binance API crypto data for the given date and symbol.
+
+        :param date_str: Date in "%Y%m%d" format.
+        :param symbol: Ticker symbol.
+        """
+        logger.info(f"Starting Binance API crypto data loading process for symbol: {symbol}")
+
+        # Validate the date is not current date or future date
+        current_date = datetime.now(self.utc).strftime("%Y%m%d")
+        if date_str >= current_date:
+            raise ValueError("date_str cannot be the current date or a future date")
+
+        # Define date range for extraction
+        start_date = datetime.strptime(date_str, "%Y%m%d").replace(tzinfo=self.utc)
+        end_date = start_date + timedelta(days=1)
+        start_date_str = start_date.strftime("%Y%m%d")
+        end_date_str = end_date.strftime("%Y%m%d")
+
+        # Extract Crypto Data for the specific symbol
+        extractor = BinanceAPIExtract(start_date=start_date_str, end_date=end_date_str)
+        extracted_data = extractor.extract_single_ticker(symbol)
+
+        if not extracted_data:
+            logger.warning(f"No data extracted for symbol: {symbol}")
+            return
+
+        # Transform Crypto Data
+        transformer = BinanceAPITransform()
+        transformed_data = transformer.transform(symbol=symbol, df=extracted_data[symbol])
+
+        # Load Crypto Data
+        loader = BinanceAPILoad()
+        loader.load({symbol: transformed_data}, start_date=start_date_str)
+
+        logger.info(f"Binance API crypto data loading process completed for symbol: {symbol}")
+
+    ####################################
+    # PYFREDAPI MACROECONOMIC DATA
+    ####################################
+
     def load_pyfredapi_macroeconomic_data(self, date_str: str):
         """
         Loads PyFredAPI macroeconomic data for the given date.
@@ -210,6 +328,10 @@ class LoaderService:
 
         logger.info(f"PyFredAPI macroeconomic data loading process completed for series ID: {series_id}")
 
+    ####################################
+    # PORTFOLIO PERFORMANCE
+    ####################################
+
     def insert_portfolio_performance_yesterday_data(self) -> dict:
         """
         Loads portfolio performance data for yesterday.
@@ -262,6 +384,14 @@ class LoaderService:
             
         return result
     
+    ####################################
+    # BACKFILL METHODS
+    ####################################
+
+    ####################################
+    # YFINANCE
+    ####################################
+    
     def backfill_yfinance_market_data(self, start_date: str, end_date: str):
         """
         Backfills Yahoo Finance market data for the given date range.
@@ -294,6 +424,47 @@ class LoaderService:
             self.load_yfinance_market_data_by_symbol(date_str, symbol)
             current_date += timedelta(days=1)
         logger.info(f"Backfill for Yahoo Finance market data for symbol {symbol} completed")
+
+    ####################################
+    # BINANCE API
+    ####################################
+
+    def backfill_binance_api_crypto_data(self, start_date: str, end_date: str):
+        """
+        Backfills Binance API crypto data for the given date range.
+
+        :param start_date: Start date in "%Y%m%d" format.
+        :param end_date: End date in "%Y%m%d" format.
+        """
+        logger.info(f"Starting backfill for Binance API crypto data from {start_date} to {end_date}")
+        current_date = datetime.strptime(start_date, "%Y%m%d")
+        end_date = datetime.strptime(end_date, "%Y%m%d")
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y%m%d")
+            self.load_binance_api_crypto_data(date_str)
+            current_date += timedelta(days=1)
+        logger.info("Backfill for Binance API crypto data completed")
+
+    def backfill_binance_api_crypto_data_by_symbol(self, start_date: str, end_date: str, symbol: str):
+        """
+        Backfills Binance API crypto data for the given date range and symbol.
+
+        :param start_date: Start date in "%Y%m%d" format.
+        :param end_date: End date in "%Y%m%d" format.
+        :param symbol: Ticker symbol.
+        """
+        logger.info(f"Starting backfill for Binance API crypto data for symbol {symbol} from {start_date} to {end_date}")
+        current_date = datetime.strptime(start_date, "%Y%m%d")
+        end_date = datetime.strptime(end_date, "%Y%m%d")
+        while current_date <= end_date:
+            date_str = current_date.strftime("%Y%m%d")
+            self.load_binance_api_crypto_data_by_symbol(date_str, symbol)
+            current_date += timedelta(days=1)
+        logger.info(f"Backfill for Binance API crypto data for symbol {symbol} completed")
+
+    ####################################
+    # PYFREDAPI MACROECONOMIC DATA
+    ####################################
 
     def backfill_pyfredapi_macroeconomic_data(self, start_date: str, end_date: str):
         """
@@ -328,6 +499,10 @@ class LoaderService:
             current_date += timedelta(days=1)
         logger.info(f"Backfill for PyFredAPI macroeconomic data for series ID {series_id} completed")
 
+    ####################################
+    # PORTFOLIO PERFORMANCE
+    ####################################
+
     def backfill_portfolio_performance_data(self, start_date: str, end_date: str) -> dict:
         """
         Backfills portfolio performance data for the given date range.
@@ -358,6 +533,10 @@ class LoaderService:
             logger.error(f"Backfill for portfolio performance data failed: {result}")
             
         return result
+    
+    ####################################
+    # FINANCIAL NEWS
+    ####################################
 
     def load_recent_financial_news(self):
         """
@@ -373,3 +552,70 @@ class LoaderService:
         news_scraper.run()
 
         logger.info("Financial News processing completed!")
+
+    ####################################
+    # SUBREDDIT PRAW
+    ####################################
+
+    def load_recent_subreddit_praw_data(self):
+        """
+        Loads recent Subreddit PRAW data.
+        """
+        logger.info("Starting Subreddit PRAW data processing")
+
+        # Wrapper
+        praw_wrapper = SubredditPrawWrapper()
+        praw_wrapper.run()
+
+        # Embedder
+        praw_embedder = SubredditPrawEmbedder()
+        praw_embedder.run()
+
+        # Sentiment Analysis
+        praw_sentiment = SubredditPrawSentiment()
+        praw_sentiment.run()
+
+        # Cleaner
+        praw_cleaner = SubredditPrawCleaner()
+        praw_cleaner.run()
+
+        logger.info("Subreddit PRAW data processing completed!")
+
+    def subreddit_praw_embedder_only(self):
+        """
+        Runs only the Subreddit PRAW embedder to process data.
+        This is useful for re-embedding existing data without re-fetching it.
+        """
+        logger.info("Starting Subreddit PRAW embedder only")
+
+        # Embedder
+        praw_embedder = SubredditPrawEmbedder()
+        praw_embedder.run()
+
+        logger.info("Subreddit PRAW embedder only completed!")
+
+    def subreddit_praw_sentiment_only(self):
+        """
+        Runs only the Subreddit PRAW sentiment analysis to process data.
+        This is useful for re-analyzing existing data without re-fetching it.
+        """
+        logger.info("Starting Subreddit PRAW sentiment analysis only")
+
+        # Sentiment Analysis
+        praw_sentiment = SubredditPrawSentiment()
+        praw_sentiment.run()
+
+        logger.info("Subreddit PRAW sentiment analysis only completed!")
+
+    def subreddit_praw_cleaner_only(self):
+        """
+        Runs only the Subreddit PRAW cleaner to process data.
+        This is useful for cleaning existing data without re-fetching or re-analyzing it.
+        """
+        logger.info("Starting Subreddit PRAW cleaner only")
+
+        # Cleaner
+        praw_cleaner = SubredditPrawCleaner()
+        praw_cleaner.run()
+
+        logger.info("Subreddit PRAW cleaner only completed!")

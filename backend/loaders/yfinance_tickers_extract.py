@@ -207,7 +207,7 @@ class YFinanceTickersExtract(BaseExtract):
 
 
 if __name__ == "__main__":
-    extractor = YFinanceTickersExtract(start_date="20250325", end_date="20250326")
+    extractor = YFinanceTickersExtract(start_date="20250625", end_date="20250626")
 
     # data = extractor.extract_single_ticker("VNQ")
     # print(data)

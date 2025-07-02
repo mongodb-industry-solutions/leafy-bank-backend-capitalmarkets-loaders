@@ -76,6 +76,10 @@ class BackfillSymbolRequest(BackfillRequest):
 class BackfillSeriesRequest(BackfillRequest):
     series_id: str
 
+####################################
+# YFINANCE
+####################################
+
 @app.post("/load-yfinance-market-data")
 async def load_yfinance_market_data(date_str: DateRequest):
     try:
@@ -100,6 +104,38 @@ async def load_yfinance_market_data_by_symbol(request: SymbolRequest):
         logging.error(f"Error loading Yahoo Finance market data by symbol: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+####################################
+# BINANCE API
+####################################
+
+@app.post("/load-binance-api-crypto-data")
+async def load_binance_api_crypto_data(date_str: DateRequest):
+    try:
+        loader_service.load_binance_api_crypto_data(date_str.date_str)
+        return {"message": f"Binance API crypto data loading process completed for date {date_str.date_str}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading Binance API crypto data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/load-binance-api-crypto-data-by-symbol")
+async def load_binance_api_crypto_data_by_symbol(request: SymbolRequest):
+    try:
+        loader_service.load_binance_api_crypto_data_by_symbol(request.date_str, request.symbol)
+        return {"message": f"Binance API crypto data loading process completed for symbol {request.symbol} on date {request.date_str}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error loading Binance API crypto data by symbol: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+####################################
+# PYFREDAPI
+####################################
+
 @app.post("/load-pyfredapi-macroeconomic-data")
 async def load_pyfredapi_macroeconomic_data(date_str: DateRequest):
     try:
@@ -123,6 +159,10 @@ async def load_pyfredapi_macroeconomic_data_by_series(request: SeriesRequest):
     except Exception as e:
         logging.error(f"Error loading PyFredAPI macroeconomic data by series: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+####################################
+# PORTFOLIO PERFORMANCE
+####################################
     
 @app.post("/insert-portfolio-performance-yesterday-data")
 async def insert_portfolio_performance_yesterday_data():
@@ -180,6 +220,14 @@ async def backfill_portfolio_performance_data(request: BackfillRequest):
     except Exception as e:
         logging.error(f"Error backfilling portfolio performance data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+####################################
+# BACKFILLS
+####################################
+
+####################################
+# YFINANCE
+####################################
 
 @app.post("/backfill-yfinance-market-data")
 async def backfill_yfinance_market_data(request: BackfillRequest):
@@ -205,6 +253,38 @@ async def backfill_yfinance_market_data_by_symbol(request: BackfillSymbolRequest
         logging.error(f"Error backfilling Yahoo Finance market data by symbol: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+####################################
+# BINANCE API
+####################################
+
+@app.post("/backfill-binance-api-crypto-data")
+async def backfill_binance_api_crypto_data(request: BackfillRequest):
+    try:
+        loader_service.backfill_binance_api_crypto_data(request.start_date, request.end_date)
+        return {"message": f"Backfill for Binance API crypto data completed from {request.start_date} to {request.end_date}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling Binance API crypto data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/backfill-binance-api-crypto-data-by-symbol")
+async def backfill_binance_api_crypto_data_by_symbol(request: BackfillSymbolRequest):
+    try:
+        loader_service.backfill_binance_api_crypto_data_by_symbol(request.start_date, request.end_date, request.symbol)
+        return {"message": f"Backfill for Binance API crypto data for symbol {request.symbol} completed from {request.start_date} to {request.end_date}"}
+    except ValueError as ve:
+        logging.error(f"Validation error: {str(ve)}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logging.error(f"Error backfilling Binance API crypto data by symbol: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+####################################
+# PYFREDAPI
+####################################
+
 @app.post("/backfill-pyfredapi-macroeconomic-data")
 async def backfill_pyfredapi_macroeconomic_data(request: BackfillRequest):
     try:
@@ -229,6 +309,10 @@ async def backfill_pyfredapi_macroeconomic_data_by_series(request: BackfillSerie
         logging.error(f"Error backfilling PyFredAPI macroeconomic data by series: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+####################################
+# FINANCIAL NEWS
+####################################
+
 @app.post("/load-recent-financial-news")
 async def load_recent_financial_news():
     try:
@@ -236,6 +320,46 @@ async def load_recent_financial_news():
         return {"message": "Financial News processing completed"}
     except Exception as e:
         logging.error(f"Error loading recent financial news: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+####################################
+# PRAW WRAPPER PROCESSING
+####################################
+
+@app.post("/load-recent-subreddit-praw-data")
+async def load_recent_subreddit_praw_data():
+    try:
+        loader_service.load_recent_subreddit_praw_data()
+        return {"message": "Subreddit PRAW data processing completed!"}
+    except Exception as e:
+        logging.error(f"Error loading Subreddit PRAW data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/subreddit-praw-embedder-only")
+async def subreddit_praw_embedder_only():
+    try:
+        loader_service.subreddit_praw_embedder_only()
+        return {"message": "Subreddit PRAW embedder only process completed!"}
+    except Exception as e:
+        logging.error(f"Error performing Subreddit PRAW embedder only: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/subreddit-praw-sentiment-only")
+async def subreddit_praw_sentiment_only():
+    try:
+        loader_service.subreddit_praw_sentiment_only()
+        return {"message": "Subreddit PRAW sentiment analysis process completed!"}
+    except Exception as e:
+        logging.error(f"Error performing Subreddit PRAW sentiment analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/subreddit-praw-cleaner-only")
+async def subreddit_praw_cleaner_only():
+    try:
+        loader_service.subreddit_praw_cleaner_only()
+        return {"message": "Subreddit PRAW cleaner only process completed!"}
+    except Exception as e:
+        logging.error(f"Error performing Subreddit PRAW cleaner only: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 ############################
@@ -270,9 +394,11 @@ async def scheduler_overview():
                     elif job["function"] == "#ic_data_etl(..)":
                         job["function"] = "run_pyfredapi_macroeconomic_data_etl"
                     elif job["function"] == "#_processing(..)":
-                        job["function"] = "run_financial_news_processing"
-                    if job["function"] == "#terday_data(..)":
+                        job["function"] = "run_subreddit_praw_data_processing"
+                    elif job["function"] == "#terday_data(..)":
                         job["function"] = "run_insert_portfolio_performance_yesterday_data"
+                    if job["function"] == "#to_data_etl(..)":
+                        job["function"] = "run_binance_api_crypto_data_etl"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
@@ -293,9 +419,11 @@ async def scheduler_overview():
                     elif job["function"] == "#ic_data_etl(..)":
                         job["function"] = "run_pyfredapi_macroeconomic_data_etl"
                     elif job["function"] == "#_processing(..)":
-                        job["function"] = "run_financial_news_processing"
-                    if job["function"] == "#terday_data(..)":
+                        job["function"] = "run_subreddit_praw_data_processing"
+                    elif job["function"] == "#terday_data(..)":
                         job["function"] = "run_insert_portfolio_performance_yesterday_data"
+                    if job["function"] == "#to_data_etl(..)":
+                        job["function"] = "run_binance_api_crypto_data_etl"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():

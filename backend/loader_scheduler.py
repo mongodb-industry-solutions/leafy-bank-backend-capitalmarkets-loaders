@@ -10,11 +10,21 @@ from loaders.yfinance_tickers_transform import YFinanceTickersTransform
 from loaders.yfinance_tickers_load import YFinanceTickersLoad
 from loaders.yfinance_tickers_cleaner import YFinanceTickersCleaner
 
+from loaders.binance_api_extract import BinanceAPIExtract
+from loaders.binance_api_transform import BinanceAPITransform
+from loaders.binance_api_load import BinanceAPILoad
+from loaders.binance_api_cleaner import BinanceAPICleaner
+
 from loaders.pyfredapi_macroindicators_extract import PyFredAPIExtract
 from loaders.pyfredapi_macroindicators_transform import PyFredAPITransform
 from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
 
 from loaders.financial_news_scraper import FinancialNewsScraper
+
+from loaders.subreddit_praw_wrapper import SubredditPrawWrapper
+from loaders.subreddit_praw_embedder import SubredditPrawEmbedder
+from loaders.subreddit_praw_sentiment import SubredditPrawSentiment
+from loaders.subreddit_praw_cleaner import SubredditPrawCleaner
 
 from loaders.portfolio_performance_load import PorfolioPerformanceLoad
 
@@ -81,6 +91,49 @@ class LoaderScheduler:
 
         logger.info("YFinanceTickers ETL process completed")
 
+    def run_binance_api_crypto_data_etl(self):
+        """
+        Runs the ETL process for Binance API crypto data: Extract, Transform, Load.
+        """
+        logger.info("Starting Binance API ETL process")
+
+        # Define date range for extraction
+        end_date = datetime.now(self.utc)
+        start_date = end_date - timedelta(days=1)
+        start_date_str = start_date.strftime("%Y%m%d")
+        end_date_str = end_date.strftime("%Y%m%d")
+
+        # Extract Crypto Data
+        extractor = BinanceAPIExtract(start_date=start_date_str, end_date=end_date_str)
+        extracted_data = extractor.extract()
+
+        # Transform Crypto Data
+        transformer = BinanceAPITransform()
+        transformed_data = {}
+        
+        # Access the 'crypto' key first to get the dictionary of symbols
+        if 'crypto' in extracted_data and extracted_data['crypto']:
+            for symbol, df in extracted_data['crypto'].items():
+                try:
+                    transformed_data[symbol] = transformer.transform(symbol=symbol, df=df)
+                except Exception as e:
+                    logger.error(f"Error transforming {symbol}: {e}")
+        else:
+            logger.warning("No crypto data was extracted")
+
+        # Load Crypto Data
+        if transformed_data:
+            loader = BinanceAPILoad()
+            loader.load(transformed_data, start_date=start_date_str)
+
+            # Clean up Crypto Data older than 60 days
+            cleaner = BinanceAPICleaner()
+            cleaner.run()
+        else:
+            logger.warning("No data to load after transformation")
+
+        logger.info("Binance API ETL process completed")
+
     def run_pyfredapi_macroeconomic_data_etl(self):
         """
         Runs the ETL process for PyFredAPI macroeconomic data: Extract, Transform, Load.
@@ -122,6 +175,34 @@ class LoaderScheduler:
 
         logger.info("Financial News processing completed!")
 
+    def run_subreddit_praw_data_processing(self):
+        """
+        Run the Subreddit PRAW data processing pipeline:
+        1. Wrapper: Fetches data from Reddit using PRAW.
+        2. Embedder: Generates embeddings for the fetched data.
+        3. Sentiment Analysis: Analyzes sentiment of the data.
+        4. Cleaner: Cleans up data older than 60 days while ensuring at least 40 documents per asset are preserved.
+        """
+        logger.info("Starting Subreddit PRAW data processing")
+
+        # Wrapper
+        praw_wrapper = SubredditPrawWrapper()
+        praw_wrapper.run()
+
+        # Embedder
+        praw_embedder = SubredditPrawEmbedder()
+        praw_embedder.run()
+
+        # Sentiment Analysis
+        praw_sentiment = SubredditPrawSentiment()
+        praw_sentiment.run()
+
+        # Cleaner
+        praw_cleaner = SubredditPrawCleaner()
+        praw_cleaner.run()
+
+        logger.info("Subreddit PRAW data processing completed!")
+
     def run_insert_portfolio_performance_yesterday_data(self):
         """
         Runs the daily portfolio performance data generation and insertion.
@@ -158,12 +239,20 @@ class LoaderScheduler:
         self.scheduler.weekly(trigger.Friday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
         self.scheduler.weekly(trigger.Saturday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
 
+        # Schedule Binance API crypto data ETL process
+        binance_api_crypto_data_etl_time = dt.time(hour=4, minute=5, tzinfo=timezone.utc)
+        self.scheduler.daily(binance_api_crypto_data_etl_time, self.run_binance_api_crypto_data_etl)
+
         # Schedule PyFredAPI ETL process
-        run_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=4, minute=5, tzinfo=timezone.utc)
+        run_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
         self.scheduler.daily(run_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
 
+        # Schedule Subreddit PRAW data processing
+        subreddit_praw_data_processing_time = dt.time(hour=4, minute=15, tzinfo=timezone.utc)
+        self.scheduler.daily(subreddit_praw_data_processing_time, self.run_subreddit_praw_data_processing)
+
         # Schedule Portfolio Performance insert
-        portfolio_performance_insert_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
+        portfolio_performance_insert_time = dt.time(hour=4, minute=20, tzinfo=timezone.utc)
         self.scheduler.daily(portfolio_performance_insert_time, self.run_insert_portfolio_performance_yesterday_data)
 
         # Schedule financial news processing
