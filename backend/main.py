@@ -399,6 +399,12 @@ async def scheduler_overview():
                         job["function"] = "run_insert_portfolio_performance_yesterday_data"
                     if job["function"] == "#to_data_etl(..)":
                         job["function"] = "run_binance_api_crypto_data_etl"
+                    if job["function"] == "#bedder_only(..)":
+                        job["function"] = "run_subreddit_praw_data_embedder_only"
+                    if job["function"] == "#timent_only(..)":
+                        job["function"] = "run_subreddit_praw_data_sentiment_only"
+                    if job["function"] == "#leaner_only(..)":
+                        job["function"] = "run_subreddit_praw_data_cleaner_only"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
@@ -424,6 +430,12 @@ async def scheduler_overview():
                         job["function"] = "run_insert_portfolio_performance_yesterday_data"
                     if job["function"] == "#to_data_etl(..)":
                         job["function"] = "run_binance_api_crypto_data_etl"
+                    if job["function"] == "#bedder_only(..)":
+                        job["function"] = "run_subreddit_praw_data_embedder_only"
+                    if job["function"] == "#timent_only(..)":
+                        job["function"] = "run_subreddit_praw_data_sentiment_only"
+                    if job["function"] == "#leaner_only(..)":
+                        job["function"] = "run_subreddit_praw_data_cleaner_only"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
