@@ -54,7 +54,8 @@ class BinanceAPIExtract(BaseExtract):
                     logger.error(f"Error extracting data for symbol {ticker}: {e}")
                     if attempt < 2:
                         logger.info(f"Retrying... ({attempt + 1}/3)")
-                        time.sleep(2)
+                        logger.debug(f"Waiting 15 seconds before retrying for symbol {ticker}...")
+                        time.sleep(15) # Wait 15 seconds before retrying
                     else:
                         logger.error(f"Failed to extract data for symbol {ticker} after 3 attempts.")
         return data_dict
