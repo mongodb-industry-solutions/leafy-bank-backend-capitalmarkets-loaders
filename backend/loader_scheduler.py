@@ -308,7 +308,7 @@ class LoaderScheduler:
         ############################################################################
         # NOTE: Configuring this later than the previous jobs to ensure that the data is available on Binance API.
         # Schedule Binance API crypto data ETL process
-        binance_api_crypto_data_etl_time = dt.time(hour=6, minute=45, tzinfo=timezone.utc)
+        binance_api_crypto_data_etl_time = dt.time(hour=5, minute=10, tzinfo=timezone.utc)
         self.scheduler.daily(binance_api_crypto_data_etl_time, self.run_binance_api_crypto_data_etl)
 
         # Schedule financial news processing

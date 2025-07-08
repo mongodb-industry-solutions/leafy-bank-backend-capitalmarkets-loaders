@@ -26,7 +26,11 @@ class BinanceAPIExtract(BaseExtract):
         """
         super().__init__(start_date, end_date)
         self.interval = interval
-        self.base_url = "https://api.binance.com/api/v3/klines"
+        # Binance API and endpoint documentation
+        # https://developers.binance.com/docs/binance-spot-api-docs/faqs/market_data_only
+        # https://developers.binance.com/docs/binance-spot-api-docs/rest-api/market-data-endpoints#klinecandlestick-data
+        # https://github.com/binance/binance-spot-api-docs/blob/master/rest-api.md#klinecandlestick-data
+        self.base_url = "https://data-api.binance.vision/api/v3/klines"
 
     def extract_tickers(self, tickers: str) -> dict:
         """
@@ -70,6 +74,17 @@ class BinanceAPIExtract(BaseExtract):
         Returns:
             pd.DataFrame: DataFrame with OHLCV data
         """
+
+        # Define headers with User-Agent
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+            "Accept": "application/json",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Connection": "keep-alive"
+        }
+
         # If we have different start and end dates, use only the start date for a single day
         if self.dt and self.dt_end and self.dt.date() != self.dt_end.date():
             logger.warning(f"Request spans multiple days. Using only {self.dt.date()} for extraction.")
@@ -123,7 +138,7 @@ class BinanceAPIExtract(BaseExtract):
             if end_time_ms:
                 params["endTime"] = end_time_ms
                     
-            response = requests.get(self.base_url, params=params)
+            response = requests.get(self.base_url, params=params, headers=headers)
             response.raise_for_status()
             chunk_data = response.json()
             
