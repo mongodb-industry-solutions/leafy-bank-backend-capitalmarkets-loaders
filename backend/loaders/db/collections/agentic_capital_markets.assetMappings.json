@@ -1,0 +1,278 @@
+[{
+  "_id": {
+    "$oid": "685eb5343118883b42674b1f"
+  },
+  "asset_id": "ETH",
+  "asset_binance": "ETHUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "Ethereum",
+    "CryptoCurrency",
+    "CryptoMarkets"
+  ],
+  "query": "ethereum OR eth"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b22"
+  },
+  "asset_id": "SOL",
+  "asset_binance": "SOLUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "Solana",
+    "CryptoCurrency",
+    "CryptoMarkets"
+  ],
+  "query": "solana OR sol"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b24"
+  },
+  "asset_id": "ADA",
+  "asset_binance": "ADAUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "cardano",
+    "CryptoCurrency",
+    "CryptoMarkets"
+  ],
+  "query": "cardano OR ada"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b21"
+  },
+  "asset_id": "XRP",
+  "asset_binance": "XRPUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "XRP",
+    "CryptoCurrency",
+    "CryptoMarkets"
+  ],
+  "query": "xrp"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b23"
+  },
+  "asset_id": "DOGE",
+  "asset_binance": "DOGEUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "dogecoin",
+    "CryptoCurrency",
+    "CryptoMarkets"
+  ],
+  "query": "dogecoin OR doge"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b1d"
+  },
+  "asset_id": "FDUSD",
+  "asset_binance": "FDUSDUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "StableCoins",
+    "CryptoCurrency",
+    "CryptoMarkets",
+    "Altcoin",
+    "CryptoCurrencyTrading"
+  ],
+  "query": "stablecoin OR stable coin"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b1e"
+  },
+  "asset_id": "BTC",
+  "asset_binance": "BTCUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "Bitcoin",
+    "CryptoCurrency",
+    "CryptoMarkets"
+  ],
+  "query": "bitcoin OR btc"
+},
+{
+  "_id": {
+    "$oid": "685eb5343118883b42674b20"
+  },
+  "asset_id": "USDC",
+  "asset_binance": "USDCUSDT",
+  "asset_type": "crypto",
+  "subreddits": [
+    "investing",
+    "StableCoins",
+    "CryptoCurrency",
+    "CryptoMarkets",
+    "Altcoin",
+    "CryptoCurrencyTrading"
+  ],
+  "query": "stablecoin OR stable coin"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7075ffa"
+  },
+  "asset_id": "SPY",
+  "asset_yfinance": "SPY",
+  "asset_type": "equity",
+  "subreddits": [
+    "investing",
+    "stocks",
+    "ETFs",
+    "StockMarket"
+  ],
+  "query": "SPY OR S&P 500"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7075ffb"
+  },
+  "asset_id": "QQQ",
+  "asset_yfinance": "QQQ",
+  "asset_type": "equity",
+  "subreddits": [
+    "investing",
+    "stocks",
+    "ETFs",
+    "StockMarket"
+  ],
+  "query": "QQQ OR Nasdaq ETF"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7075ffc"
+  },
+  "asset_id": "EEM",
+  "asset_yfinance": "EEM",
+  "asset_type": "equity",
+  "subreddits": [
+    "investing",
+    "stocks",
+    "ETFs",
+    "StockMarket"
+  ],
+  "query": "EEM OR Emerging Markets"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7075ffd"
+  },
+  "asset_id": "XLE",
+  "asset_yfinance": "XLE",
+  "asset_type": "equity",
+  "subreddits": [
+    "investing",
+    "stocks",
+    "ETFs",
+    "StockMarket"
+  ],
+  "query": "XLE OR Energy Sector"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7075ffe"
+  },
+  "asset_id": "TLT",
+  "asset_yfinance": "TLT",
+  "asset_type": "bonds",
+  "subreddits": [
+    "investing",
+    "bonds",
+    "fixedincome",
+    "ETFs",
+    "FinancialIndependence",
+    "AssetAllocation",
+    "MacroEconomics",
+    "Economics",
+    "FinancialPlanning"
+  ],
+  "query": "TLT OR treasury"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7075fff"
+  },
+  "asset_id": "LQD",
+  "asset_yfinance": "LQD",
+  "asset_type": "bonds",
+  "subreddits": [
+    "investing",
+    "bonds",
+    "fixedincome",
+    "ETFs"
+  ],
+  "query": "LQD OR Investment Grade"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7076000"
+  },
+  "asset_id": "HYG",
+  "asset_yfinance": "HYG",
+  "asset_type": "bonds",
+  "subreddits": [
+    "investing",
+    "bonds",
+    "fixedincome",
+    "ETFs"
+  ],
+  "query": "HYG OR High Yield"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7076001"
+  },
+  "asset_id": "VNQ",
+  "asset_yfinance": "VNQ",
+  "asset_type": "real estate",
+  "subreddits": [
+    "investing",
+    "realestateinvesting",
+    "ETFs"
+  ],
+  "query": "VNQ OR Real Estate"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7076002"
+  },
+  "asset_id": "GLD",
+  "asset_yfinance": "GLD",
+  "asset_type": "commodity",
+  "subreddits": [
+    "investing",
+    "commodities",
+    "Gold",
+    "ETFs"
+  ],
+  "query": "GLD OR Gold"
+},
+{
+  "_id": {
+    "$oid": "686e1cdace2cc4d7b7076003"
+  },
+  "asset_id": "USO",
+  "asset_yfinance": "USO",
+  "asset_type": "commodity",
+  "subreddits": [
+    "investing",
+    "commodities",
+    "oilandgasworkers",
+    "ETFs"
+  ],
+  "query": "USO OR Oil"
+}]
