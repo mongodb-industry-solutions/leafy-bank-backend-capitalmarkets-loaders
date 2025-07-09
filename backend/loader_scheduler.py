@@ -160,7 +160,7 @@ class LoaderScheduler:
 
         logger.info("PyFredAPI ETL process completed")
 
-    def run_financial_news_processing(self):
+    def run_financial_news_extraction(self):
         """
         Runs the Financial News processing: Scrape, Embeddings, Sentiment Score.
         """
@@ -269,6 +269,15 @@ class LoaderScheduler:
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
         """
+        # Schedule Financial News processing on Mondays
+        # NOTE: It runs only once a week on Mondays at 04:00 UTC. The reasons are:
+        # 1. To avoid unnecessary recurrent scraping of news articles. For some assets, there may not be enough news articles to scrape daily.
+        # 2. Reduce costs by minimizing Voyage AI requests for embeddings.
+        # 3. Minimize delays on calculating sentiment scores.
+        # 4. Have better control over user flow and experience.
+        # In real-world scenarios, you will have your own dataset or data retrieval/ingestion process for financial news.
+        financial_news_extraction_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
+        self.scheduler.weekly(trigger.Monday(financial_news_extraction_time), self.run_financial_news_extraction)
 
         # Schedule Yahoo Finance tickers ETL process
         yfinance_market_data_etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
@@ -310,22 +319,6 @@ class LoaderScheduler:
         # Schedule Binance API crypto data ETL process
         binance_api_crypto_data_etl_time = dt.time(hour=5, minute=10, tzinfo=timezone.utc)
         self.scheduler.daily(binance_api_crypto_data_etl_time, self.run_binance_api_crypto_data_etl)
-
-        # Schedule financial news processing
-        # NOTE: Financial news scraping process is disabled for now, a fixed dataset is used for this project.
-        # The reasons are:
-        # 1. To avoid unnecessary recurrent scraping of news articles during runtime.
-        # 2. Reduce costs by minimizing Voyage AI requests for embeddings.
-        # 3. Minimize delays on calculating sentiment scores.
-        # 4. Have better control over user flow and experience.
-        # In real-world scenarios, you will have your own dataset or data retrieval/ingestion process for financial news.
-        ########################################################################
-        # news_processing_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
-        # self.scheduler.weekly(trigger.Tuesday(news_processing_time), self.run_financial_news_processing)
-        # self.scheduler.weekly(trigger.Wednesday(news_processing_time), self.run_financial_news_processing)
-        # self.scheduler.weekly(trigger.Thursday(news_processing_time), self.run_financial_news_processing)
-        # self.scheduler.weekly(trigger.Friday(news_processing_time), self.run_financial_news_processing)
-        # self.scheduler.weekly(trigger.Saturday(news_processing_time), self.run_financial_news_processing)
         
         logger.info("Scheduled jobs configured!")
 

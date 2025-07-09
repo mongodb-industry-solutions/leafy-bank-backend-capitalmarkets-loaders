@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 import logging
 import time
 from loaders.db.mdb import MongoDBConnector
-from loaders.config.config_loader import ConfigLoader
 
 # Configure logging
 logging.basicConfig(
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class SubredditPrawWrapper(MongoDBConnector):
     def __init__(self, uri=None, database_name: str = None, appname: str = None, 
-                 mappings_collection_name: str = os.getenv("SUBREDDIT_MAPPINGS_COLLECTION", "subredditMappings"),
+                 mappings_collection_name: str = os.getenv("ASSET_MAPPINGS_COLLECTION", "assetMappings"),
                  submissions_collection_name: str = os.getenv("SUBREDDIT_SUBMISSIONS_COLLECTION", "subredditSubmissions")):
         """
         Reddit Subreddit data extractor using mappings from MongoDB.
@@ -31,13 +30,8 @@ class SubredditPrawWrapper(MongoDBConnector):
         super().__init__(uri, database_name, appname)
         self.mappings_collection_name = mappings_collection_name
         self.submissions_collection_name = submissions_collection_name
-        logger.info(f"Using MongoDB collection '{self.mappings_collection_name}' for subreddit mappings")
+        logger.info(f"Using MongoDB collection '{self.mappings_collection_name}' for asset mappings")
         logger.info(f"Using MongoDB collection '{self.submissions_collection_name}' for subreddit submissions")
-        
-        # Load configuration
-        self.config = ConfigLoader()
-        self.binance_assets = self.config.get("BINANCE_ASSETS", "").split()
-        logger.info(f"Loaded {len(self.binance_assets)} Binance assets from config")
         
         # Create indexes for efficient queries
         self._ensure_indexes()
@@ -48,9 +42,9 @@ class SubredditPrawWrapper(MongoDBConnector):
     def _ensure_indexes(self):
         """Ensure necessary indexes exist on the collections."""
         try:
-            # Create index on asset_binance field if it doesn't exist
-            self.db[self.mappings_collection_name].create_index("asset_binance")
-            logger.info("Created index on asset_binance field in mappings collection")
+            # Create index on asset_id field in mappings collection
+            self.db[self.mappings_collection_name].create_index("asset_id")
+            logger.info("Created index on asset_id field in mappings collection")
             
             # Create indexes on submissions collection
             # Use compound index on url + asset_id to allow same URL for different assets
@@ -62,6 +56,8 @@ class SubredditPrawWrapper(MongoDBConnector):
             self.db[self.submissions_collection_name].create_index("subreddit")
             self.db[self.submissions_collection_name].create_index("created_at_utc")
             self.db[self.submissions_collection_name].create_index("extraction_timestamp_utc")
+            # Add compound index for date-based checking
+            self.db[self.submissions_collection_name].create_index([("asset_id", 1), ("subreddit", 1), ("extraction_timestamp_utc", 1)])
             logger.info("Created indexes on submissions collection")
         except Exception as e:
             logger.warning(f"Could not create indexes: {e}")
@@ -82,45 +78,79 @@ class SubredditPrawWrapper(MongoDBConnector):
             logger.error(f"Error initializing Reddit API client: {e}")
             raise
     
-    def get_mapping(self, binance_asset: str) -> dict:
-        """Get the subreddit mapping for a specific Binance asset from MongoDB."""
+    def _check_existing_data_for_today(self, asset_id: str, subreddit: str) -> bool:
+        """
+        Check if data already exists for the given asset_id and subreddit for today.
+        
+        Args:
+            asset_id (str): The asset ID to check
+            subreddit (str): The subreddit name to check
+            
+        Returns:
+            bool: True if data exists for today, False otherwise
+        """
         try:
-            mapping = self.db[self.mappings_collection_name].find_one({"asset_binance": binance_asset})
+            # Get today's date in YYYY-MM-DD format
+            today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            
+            # Create date range for today (from 00:00:00 to 23:59:59 UTC)
+            start_of_day = datetime.strptime(today_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end_of_day = start_of_day.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            # Query for existing data
+            existing_count = self.db[self.submissions_collection_name].count_documents({
+                "asset_id": asset_id,
+                "subreddit": subreddit,
+                "extraction_timestamp_utc": {
+                    "$gte": start_of_day,
+                    "$lte": end_of_day
+                }
+            })
+            
+            if existing_count > 0:
+                logger.info(f"Found {existing_count} existing submissions for asset_id={asset_id}, subreddit={subreddit} on {today_date}. Skipping...")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking existing data for {asset_id}/{subreddit}: {e}")
+            return False
+    
+    def get_mapping(self, asset_id: str) -> dict:
+        """Get the subreddit mapping for a specific asset ID from MongoDB."""
+        try:
+            mapping = self.db[self.mappings_collection_name].find_one({"asset_id": asset_id})
             if mapping:
-                logger.info(f"Found mapping for {binance_asset}: {len(mapping['subreddits'])} subreddits")
+                logger.info(f"Found mapping for {asset_id}: {len(mapping['subreddits'])} subreddits")
             else:
-                logger.warning(f"No mapping found for {binance_asset}")
+                logger.warning(f"No mapping found for {asset_id}")
             return mapping
         except Exception as e:
-            logger.error(f"Error retrieving mapping for {binance_asset}: {e}")
+            logger.error(f"Error retrieving mapping for {asset_id}: {e}")
             return None
     
-    def get_all_mappings(self, only_configured_assets: bool = False) -> list:
-        """Get all subreddit mappings from MongoDB, optionally limited to configured Binance assets."""
+    def get_all_mappings(self) -> list:
+        """Get all asset mappings from MongoDB."""
         try:
-            query = {}
-            
-            if only_configured_assets and self.binance_assets:
-                query["asset_binance"] = {"$in": self.binance_assets}
-                filter_str = " (filtered to configured Binance assets only)"
-            else:
-                filter_str = ""
-            
-            mappings = list(self.db[self.mappings_collection_name].find(query))
-            logger.info(f"Retrieved {len(mappings)} asset mappings{filter_str}")
-            
+            mappings = list(self.db[self.mappings_collection_name].find({}))
+            logger.info(f"Retrieved {len(mappings)} asset mappings")
             return mappings
         except Exception as e:
             logger.error(f"Error retrieving asset mappings: {e}")
             return []
     
     def search_subreddit(self, subreddit_name: str, query: str, asset_id: str = None,
-                        binance_asset: str = None, sort: str = "new", 
+                        asset_binance: str = None, asset_yfinance: str = None, sort: str = "new", 
                         time_filter: str = "day", limit: int = 10) -> list:
         """
         Search a specific subreddit for submissions matching the query and store results.
         Handles cases where subreddits might be unavailable or deleted.
         """
+        # Check if data already exists for today
+        if self._check_existing_data_for_today(asset_id, subreddit_name):
+            return []
+        
         logger.info(f"Searching subreddit r/{subreddit_name} for query: '{query}'")
         
         submissions_data = []
@@ -147,7 +177,8 @@ class SubredditPrawWrapper(MongoDBConnector):
                             subreddit_name=subreddit_name, 
                             query=query,
                             asset_id=asset_id,
-                            binance_asset=binance_asset
+                            asset_binance=asset_binance,
+                            asset_yfinance=asset_yfinance
                         )
                         submissions_data.append(submission_data)
                     
@@ -196,7 +227,7 @@ class SubredditPrawWrapper(MongoDBConnector):
         return submissions_data
     
     def _process_submission(self, submission, subreddit_name: str, query: str, 
-                       asset_id: str = None, binance_asset: str = None) -> dict:
+                       asset_id: str = None, asset_binance: str = None, asset_yfinance: str = None) -> dict:
         """
         Process a submission and extract relevant data with enhanced fields for semantic search.
         Also captures up to 3 most recent comments, if available.
@@ -284,11 +315,16 @@ class SubredditPrawWrapper(MongoDBConnector):
             "submission_dict": submission_dict,  # Store structured data instead of string
             "extraction_timestamp_utc": extraction_timestamp,
             "asset_id": asset_id,
-            "binance_asset": binance_asset,
             "query": query,
             # Add the extracted comments
             "comments": comments_data
         }
+        
+        # Add asset-specific fields based on what's available
+        if asset_binance:
+            submission_data["binance_asset"] = asset_binance
+        if asset_yfinance:
+            submission_data["asset_yfinance"] = asset_yfinance
         
         logger.debug(f"Processed submission: {submission.title}")
         return submission_data
@@ -336,22 +372,25 @@ class SubredditPrawWrapper(MongoDBConnector):
         logger.info(f"Stored {stored_count} new submissions and updated {updated_count} existing submissions in MongoDB")
         return stored_count
     
-    def search_for_asset(self, binance_asset: str, sort: str = "new", 
+    def search_for_asset(self, asset_id: str, sort: str = "new", 
                         time_filter: str = "day", limit: int = 10) -> dict:
         """
-        Search for content related to a specific Binance asset across its mapped subreddits
+        Search for content related to a specific asset across its mapped subreddits
         and store results in MongoDB.
         """
-        mapping = self.get_mapping(binance_asset)
+        mapping = self.get_mapping(asset_id)
         if not mapping:
-            logger.warning(f"No subreddit mapping found for {binance_asset}")
+            logger.warning(f"No subreddit mapping found for {asset_id}")
             return {}
         
         subreddits = mapping.get("subreddits", [])
-        query = mapping.get("query", binance_asset)
-        asset_id = mapping.get("asset_id")
+        query = mapping.get("query", asset_id)
         
-        logger.info(f"Searching for {binance_asset} (asset_id: {asset_id}) with query '{query}' across {len(subreddits)} subreddits")
+        # Get asset-specific identifiers
+        asset_binance = mapping.get("asset_binance")
+        asset_yfinance = mapping.get("asset_yfinance")
+        
+        logger.info(f"Searching for {asset_id} with query '{query}' across {len(subreddits)} subreddits")
         
         results = {}
         for subreddit in subreddits:
@@ -359,7 +398,8 @@ class SubredditPrawWrapper(MongoDBConnector):
                 subreddit_name=subreddit,
                 query=query,
                 asset_id=asset_id,
-                binance_asset=binance_asset,
+                asset_binance=asset_binance,
+                asset_yfinance=asset_yfinance,
                 sort=sort,
                 time_filter=time_filter,
                 limit=limit
@@ -368,44 +408,38 @@ class SubredditPrawWrapper(MongoDBConnector):
                 results[subreddit] = submissions
         
         total_submissions = sum(len(subs) for subs in results.values())
-        logger.info(f"Found {total_submissions} submissions across {len(results)} subreddits for {binance_asset}")
+        logger.info(f"Found {total_submissions} submissions across {len(results)} subreddits for {asset_id}")
         
         return results
     
     def search_all_assets(self, sort: str = "new", time_filter: str = "day", 
-                         limit: int = 10, only_configured_assets: bool = True) -> dict:
+                         limit: int = 10) -> dict:
         """
-        Search for content related to all assets in the database, optionally limited to configured assets,
-        and store results in MongoDB.
+        Search for content related to all assets in the database and store results in MongoDB.
         """
-        # If only searching configured assets, we can use the list directly
-        if only_configured_assets:
-            assets_to_search = self.binance_assets
-            logger.info(f"Searching for content related to {len(assets_to_search)} configured Binance assets")
-        else:
-            # Otherwise, get all mappings from MongoDB
-            mappings = self.get_all_mappings()
-            assets_to_search = [mapping["asset_binance"] for mapping in mappings]
-            logger.info(f"Searching for content related to {len(assets_to_search)} assets from database")
+        mappings = self.get_all_mappings()
         
-        if not assets_to_search:
-            logger.warning("No assets found to search")
+        if not mappings:
+            logger.warning("No asset mappings found in database")
             return {}
         
+        asset_ids = [mapping["asset_id"] for mapping in mappings]
+        logger.info(f"Searching for content related to {len(asset_ids)} assets from database")
+        
         results = {}
-        for binance_asset in assets_to_search:
+        for asset_id in asset_ids:
             asset_results = self.search_for_asset(
-                binance_asset=binance_asset,
+                asset_id=asset_id,
                 sort=sort,
                 time_filter=time_filter,
                 limit=limit
             )
             if asset_results:
-                results[binance_asset] = asset_results
+                results[asset_id] = asset_results
         
         return results
     
-    def run(self, sort: str = "new", time_filter: str = "day", limit: int = 10, only_configured_assets: bool = True):
+    def run(self, sort: str = "new", time_filter: str = "day", limit: int = 10):
         """
         Runs the Reddit data wrapper process.
 
@@ -413,14 +447,13 @@ class SubredditPrawWrapper(MongoDBConnector):
             sort (str): Sorting method for submissions (default: "new")
             time_filter (str): Time filter for submissions (default: "day")
             limit (int): Maximum number of submissions to fetch per subreddit (default: 10)
-            only_configured_assets (bool): If True, only search configured Binance assets (default: True)
 
         """
-        # Execute data extraction and storage for all configured Binance assets
-        logger.info("Starting Reddit data extraction and storage for configured Binance assets")
+        # Execute data extraction and storage for all assets in assetMappings collection
+        logger.info("Starting Reddit data extraction and storage for all assets in assetMappings collection")
         
         # Search all assets and store results (this will automatically store in MongoDB)
-        results = self.search_all_assets(sort, time_filter, limit, only_configured_assets)
+        results = self.search_all_assets(sort, time_filter, limit)
         
         # Log summary information
         total_assets = len(results)

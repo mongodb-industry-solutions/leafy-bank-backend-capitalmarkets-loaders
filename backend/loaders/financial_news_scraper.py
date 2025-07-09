@@ -3,7 +3,6 @@ import re
 import requests
 from time import sleep
 from bs4 import BeautifulSoup
-from loaders.config.config_loader import ConfigLoader
 from loaders.db.mdb import MongoDBConnector
 from loaders.generic_scraper import GenericScraper
 from datetime import datetime, timezone
@@ -12,7 +11,7 @@ from tqdm import tqdm
 from pymongo import UpdateOne
 from loaders.embeddings.vogayeai.vogaye_ai_embeddings import VogayeAIEmbeddings
 
-# from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
 import os
 from dotenv import load_dotenv
@@ -49,19 +48,28 @@ class FinancialNewsScraper(GenericScraper):
         self.collection_name = collection_name
         self.scrape_num_articles = scrape_num_articles
         self.mongo_client = MongoDBConnector()
-        # Get the database collection
+
+        # Get the asset mappings collection name from environment variables
+        asset_mappings_collection = os.getenv("ASSET_MAPPINGS_COLLECTION", "assetMappings")
+        self.mappings_coll = self.mongo_client.get_collection(collection_name=asset_mappings_collection)
+        self.assets_metadata = self._load_asset_metadata()
+
+        # Get the database collection for financial news
         self.collection = self.mongo_client.get_collection(collection_name=collection_name)
+        
         # == EMBEDDINGS ==
         # Instantiate the VogayeAIEmbeddings class
         self.vogaye_embeddings = VogayeAIEmbeddings(api_key=os.getenv("VOYAGE_API_KEY"))
         # https://blog.voyageai.com/2024/06/03/domain-specific-embeddings-finance-edition-voyage-finance-2/
         self.vogate_model_id = "voyage-finance-2"
+        
         # == SENTIMENT SCORE ==
-        # Load the FinBERT model and tokenizer
+        # Initialize FinBERT model for sentiment analysis
+        logger.info("Loading FinBERT model for sentiment analysis...")
         self.tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         self.model = AutoModelForSequenceClassification.from_pretrained("ProsusAI/finbert")
-        # Initialize the sentiment analysis pipeline
         self.sentiment_pipeline = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer, top_k=None)
+        logger.info("FinBERT model loaded successfully")
 
     @staticmethod
     def extract_article(card, ticker):
@@ -97,29 +105,22 @@ class FinancialNewsScraper(GenericScraper):
             'ticker': ticker
         }
 
-    def get_tickers(self):
+    def _load_asset_metadata(self):
         """
-        Loads tickers from the configuration file and normalizes them.
+        Load asset metadata from the assetMappings collection.
+        This includes both asset_id (ticker) and query string.
+
+        Returns:
+            A list of dicts with "ticker" and "query" keys.
         """
-        logger.info("Loading tickers from configuration")
-        config_loader = ConfigLoader()
+        mappings = self.mappings_coll.find({}, {"asset_id": 1, "query": 1})
+        return [
+            {"ticker": doc["asset_id"], "query": doc["query"]}
+            for doc in mappings
+            if "asset_id" in doc and "query" in doc
+        ]
 
-        # Load configurations
-        equities = config_loader.get("EQUITIES").split()
-        bonds = config_loader.get("BONDS").split()
-        real_estate = config_loader.get("REAL_ESTATE").split()
-        commodities = config_loader.get("COMMODITIES").split()
-        market_volatility = config_loader.get("MARKET_VOLATILITY").split()
-
-        # Combine all tickers into a single list
-        tickers = equities + bonds + real_estate + commodities + market_volatility
-
-        # Normalize tickers (remove special characters like ^)
-        normalized_tickers = [ticker.replace("^", "") for ticker in tickers]
-
-        return normalized_tickers
-
-    def scrape_articles(self, search_query):
+    def scrape_articles(self, search_query, ticker):
         """
         Scrape news articles for a specific search query.
 
@@ -143,7 +144,7 @@ class FinancialNewsScraper(GenericScraper):
 
             # Extract articles from the page
             for card in cards:
-                article = self.extract_article(card, search_query)
+                article = self.extract_article(card, ticker)
                 link = article['link']
                 if link not in links:
                     links.add(link)
@@ -165,18 +166,17 @@ class FinancialNewsScraper(GenericScraper):
 
     def scrape_all_tickers(self):
         """
-        Scrape news articles for a list of tickers.
-
-        Args:
-            tickers: list
+        Scrape news articles for all tickers using their associated queries.
         """
-        tickers = self.get_tickers()
-        logger.info(f"Scraping news for tickers: {tickers}")
+        logger.info(f"Scraping news for tickers: {[a['ticker'] for a in self.assets_metadata]}")
 
-        for ticker in tickers:
+        for asset in self.assets_metadata:
+            ticker = asset["ticker"]
+            query = asset["query"]
             logger.info(f"Scraping news for ticker: {ticker}")
+            logger.info(f"Using query: {query}")
             try:
-                self.scrape_articles(ticker)
+                self.scrape_articles(search_query=query, ticker=ticker)
             except Exception as e:
                 logger.error(f"Error while scraping news for {ticker}: {e}")
 
@@ -274,13 +274,11 @@ class FinancialNewsScraper(GenericScraper):
     def process_articles_sentiment_scores(self):
         """
         Processes financial news articles by:
-          - Computing the sentiment scores for the article_string.
-          - Updating the document with the new sentiment_score attribute.
+        - Computing the sentiment scores for the article_string.
+        - Updating the document with the new sentiment_score attribute.
         """
-        collection = self.collection
-        # Filter to find articles that do not have sentiment_score attribute
-        articles = list(collection.find(
-            {"sentiment_score": {"$exists": False}}))
+        # Find articles without sentiment_score
+        articles = list(self.collection.find({"sentiment_score": {"$exists": False}}))
         logger.info("Found %d unprocessed articles.", len(articles))
 
         if not articles:
@@ -292,9 +290,9 @@ class FinancialNewsScraper(GenericScraper):
             article_string = article.get("article_string", "")
             sentiment_scores = self.get_sentiment_scores(article_string)
             if sentiment_scores is None:
-                logger.error(
-                    "Skipping article with _id: %s due to sentiment analysis error.", article.get("_id"))
+                logger.error("Skipping article with _id: %s due to sentiment analysis error.", article.get("_id"))
                 continue
+
             update = {
                 "$set": {
                     "sentiment_score": sentiment_scores
@@ -304,41 +302,86 @@ class FinancialNewsScraper(GenericScraper):
             logger.info("Processed article with _id: %s", article.get("_id"))
 
         if operations:
-            result = collection.bulk_write(operations)
-            logger.info("Bulk update result: Matched: %d, Modified: %d",
-                        result.matched_count, result.modified_count)
+            result = self.collection.bulk_write(operations)
+            logger.info("Bulk update result: Matched: %d, Modified: %d", result.matched_count, result.modified_count)
         else:
             logger.info("No articles were updated.")
+
+    def remove_duplicates(self):
+        """
+        Removes duplicate articles from the collection based on ticker and link.
+        Keeps only one article for each unique ticker+link combination.
+        """
+        logger.info("Starting duplicate removal process...")
+        
+        # Aggregation pipeline to find duplicates
+        pipeline = [
+            {
+                "$group": {
+                    "_id": {
+                        "ticker": "$ticker",
+                        "link": "$link"
+                    },
+                    "count": {"$sum": 1},
+                    "docs": {"$push": "$_id"}
+                }
+            },
+            {
+                "$match": {
+                    "count": {"$gt": 1}
+                }
+            }
+        ]
+        
+        duplicates = list(self.collection.aggregate(pipeline))
+        
+        if not duplicates:
+            logger.info("No duplicate articles found.")
+            return
+        
+        logger.info(f"Found {len(duplicates)} groups of duplicate articles.")
+        
+        total_deleted = 0
+        
+        for duplicate_group in tqdm(duplicates, desc="Removing duplicates"):
+            ticker = duplicate_group["_id"]["ticker"]
+            link = duplicate_group["_id"]["link"]
+            count = duplicate_group["count"]
+            doc_ids = duplicate_group["docs"]
+            
+            # Keep the first document and delete the rest
+            ids_to_delete = doc_ids[1:]  # Skip the first one
+            
+            if ids_to_delete:
+                result = self.collection.delete_many({"_id": {"$in": ids_to_delete}})
+                deleted_count = result.deleted_count
+                total_deleted += deleted_count
+                
+                logger.info(f"Removed {deleted_count} duplicates for ticker '{ticker}' with link: {link[:50]}...")
+        
+        logger.info(f"Duplicate removal completed. Total articles deleted: {total_deleted}")
 
     def clean_up_articles(self):
         """
         Cleans up the financial news collection by keeping only the most recent 100 articles for each ticker.
         """
-        collection = self.collection
-        tickers = self.get_tickers()
+        for asset in self.assets_metadata:
+            ticker = asset["ticker"]
 
-        for ticker in tickers:
-            # Find the number of articles for the ticker
-            article_count = collection.count_documents({"ticker": ticker})
+            article_count = self.collection.count_documents({"ticker": ticker})
             if article_count > 100:
-                logger.info(
-                    f"Ticker {ticker} has {article_count} articles. Cleaning up...")
+                logger.info(f"Ticker {ticker} has {article_count} articles. Cleaning up...")
 
-                # Find the articles to delete, keeping the most recent 100
-                articles_to_delete = collection.find({"ticker": ticker}).sort(
-                    "extraction_timestamp_utc", 1).limit(article_count - 100)
-                article_ids_to_delete = [article["_id"]
-                                         for article in articles_to_delete]
+                articles_to_delete = self.collection.find({"ticker": ticker}) \
+                                                    .sort("extraction_timestamp_utc", 1) \
+                                                    .limit(article_count - 100)
 
-                # Delete the old articles
-                result = collection.delete_many(
-                    {"_id": {"$in": article_ids_to_delete}})
-                logger.info(
-                    f"Deleted {result.deleted_count} old articles for ticker {ticker}")
+                article_ids_to_delete = [article["_id"] for article in articles_to_delete]
 
+                result = self.collection.delete_many({"_id": {"$in": article_ids_to_delete}})
+                logger.info(f"Deleted {result.deleted_count} old articles for ticker {ticker}")
             else:
-                logger.info(
-                    f"Ticker {ticker} has {article_count} articles. No clean up needed.")
+                logger.info(f"Ticker {ticker} has {article_count} articles. No clean up needed.")
 
     def run(self):
         """
@@ -348,6 +391,11 @@ class FinancialNewsScraper(GenericScraper):
         logger.info("Scrape all tickers process started!")
         self.scrape_all_tickers()
         logger.info("Scrape all tickers process completed!")
+
+        # Remove duplicates
+        logger.info("Remove duplicates process started!")
+        self.remove_duplicates()
+        logger.info("Remove duplicates process completed!")
 
         # Embeddings
         logger.info("Process articles embeddings started!")

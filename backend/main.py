@@ -405,6 +405,8 @@ async def scheduler_overview():
                         job["function"] = "run_subreddit_praw_data_sentiment_only"
                     if job["function"] == "#leaner_only(..)":
                         job["function"] = "run_subreddit_praw_data_cleaner_only"
+                    if job["function"] == "#_extraction(..)":
+                        job["function"] = "run_financial_news_extraction"    
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
@@ -436,6 +438,8 @@ async def scheduler_overview():
                         job["function"] = "run_subreddit_praw_data_sentiment_only"
                     if job["function"] == "#leaner_only(..)":
                         job["function"] = "run_subreddit_praw_data_cleaner_only"
+                    if job["function"] == "#_extraction(..)":
+                        job["function"] = "run_financial_news_extraction"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
