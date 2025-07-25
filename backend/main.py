@@ -161,6 +161,22 @@ async def load_pyfredapi_macroeconomic_data_by_series(request: SeriesRequest):
         raise HTTPException(status_code=500, detail=str(e))
     
 ####################################
+# COINGECKO STABLECOIN MARKET CAP
+####################################
+
+@app.post("/load-coingecko-stablecoin-market-cap-data")
+async def load_coingecko_stablecoin_market_cap_data():
+    """
+    Loads Coingecko stablecoin market cap data for today.
+    """
+    try:
+        msg = loader_service.load_coingecko_stablecoin_market_cap_data()
+        return {"message": msg}
+    except Exception as e:
+        logging.error(f"Error loading Coingecko stablecoin market cap data: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+####################################
 # PORTFOLIO PERFORMANCE
 ####################################
     
@@ -220,7 +236,7 @@ async def backfill_portfolio_performance_data(request: BackfillRequest):
     except Exception as e:
         logging.error(f"Error backfilling portfolio performance data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 ####################################
 # BACKFILLS
 ####################################
@@ -366,7 +382,7 @@ async def subreddit_praw_cleaner_only():
 ## -- LOADER SCHEDULER -- ##
 ############################
 
-@app.post("/scheduler-overview")
+@app.get("/scheduler-overview")
 async def scheduler_overview():
     try:
         overview = str(scheduler.scheduler)
@@ -406,8 +422,10 @@ async def scheduler_overview():
                     if job["function"] == "#leaner_only(..)":
                         job["function"] = "run_subreddit_praw_data_cleaner_only"
                     if job["function"] == "#_extraction(..)":
-                        job["function"] = "run_financial_news_extraction"    
-                    
+                        job["function"] = "run_financial_news_extraction"
+                    if job["function"] == "#et_cap_data(..)":
+                        job["function"] = "run_coingecko_stablecoin_market_cap_data"
+
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():
                         job["due_in"] += "d"
@@ -440,6 +458,8 @@ async def scheduler_overview():
                         job["function"] = "run_subreddit_praw_data_cleaner_only"
                     if job["function"] == "#_extraction(..)":
                         job["function"] = "run_financial_news_extraction"
+                    if job["function"] == "#et_cap_data(..)":
+                        job["function"] = "run_coingecko_stablecoin_market_cap_data"
                     
                     # Add "d" to single digit due_in values
                     if job["due_in"].isdigit():

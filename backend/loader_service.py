@@ -24,6 +24,8 @@ from loaders.pyfredapi_macroindicators_load import PyFredAPILoad
 
 from loaders.portfolio_performance_load import PorfolioPerformanceLoad
 
+from loaders.coingecko_stablecoin_market_cap import CoingeckoStablecoinMarketCap
+
 from loaders.config.config_loader import ConfigLoader
 
 import os
@@ -52,15 +54,16 @@ class LoaderService:
         6. Load PyFredAPI macroeconomic data for a given date and series id. (load_pyfredapi_macroeconomic_data_by_series)
         7. Load Portfolio Performance yesterday data. (insert_portfolio_performance_yesterday_data)
         8. Load Portfolio Performance data for a given date. (insert_portfolio_performance_data_for_date)
-        9. Backfill Yahoo Finance market data for a given date range. (backfill_yfinance_market_data)
-        10. Backfill Yahoo Finance market data for a given date range and symbol. (backfill_yfinance_market_data_by_symbol)
-        11. Backfill Binance API crypto data for a given date range. (backfill_binance_api_crypto_data)
-        12. Backfill Binance API crypto data for a given date range and symbol. (backfill_binance_api_crypto_data_by_symbol)
-        13. Backfill PyFredAPI macroeconomic data for a given date range. (backfill_pyfredapi_macroeconomic_data)
-        14. Backfill PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
-        15. Backfill Portfolio Performance data for a given date range. (backfill_portfolio_performance_data)
-        16. Load recent financial news data. (load_recent_financial_news)
-        17. Load recent Subreddit PRAW data. (load_recent_subreddit_praw_data)
+        9. Load Coingecko Stablecoin Market Cap data. (load_coingecko_stablecoin_market_cap_data)
+        10. Backfill Yahoo Finance market data for a given date range. (backfill_yfinance_market_data)
+        11. Backfill Yahoo Finance market data for a given date range and symbol. (backfill_yfinance_market_data_by_symbol)
+        12. Backfill Binance API crypto data for a given date range. (backfill_binance_api_crypto_data)
+        13. Backfill Binance API crypto data for a given date range and symbol. (backfill_binance_api_crypto_data_by_symbol)
+        14. Backfill PyFredAPI macroeconomic data for a given date range. (backfill_pyfredapi_macroeconomic_data)
+        15. Backfill PyFredAPI macroeconomic data for a given date range and series id. (backfill_pyfredapi_macroeconomic_data_by_series)
+        16. Backfill Portfolio Performance data for a given date range. (backfill_portfolio_performance_data)
+        17. Load recent financial news data. (load_recent_financial_news)
+        18. Load recent Subreddit PRAW data. (load_recent_subreddit_praw_data)
         """ 
         self.config_loader = ConfigLoader()
         self.utc = timezone.utc
@@ -383,7 +386,29 @@ class LoaderService:
             logger.warning(f"Portfolio performance data loading for {date_str} returned: {result}")
             
         return result
-    
+
+    ####################################
+    # COINGECKO STABLECOIN MARKET CAP
+    ####################################
+
+    def load_coingecko_stablecoin_market_cap_data(self) -> str:
+        """
+        Loads Coingecko Stablecoin Market Cap data on a daily basis.
+        This method checks if data for today already exists to prevent duplicates.
+        If data for today does not exist, it extracts, processes, and stores the data.
+
+        Returns:
+            str: Message indicating the result of the operation.
+        """
+        logger.info("Starting Coingecko Stablecoin Market Cap data loading process")
+
+        extractor = CoingeckoStablecoinMarketCap()
+        msg = extractor.run_daily_extraction()
+
+        logger.info(f"Coingecko Stablecoin message: {msg}")
+
+        return msg
+
     ####################################
     # BACKFILL METHODS
     ####################################
