@@ -1,0 +1,247 @@
+[{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac54"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "ALL_STABLECOINS",
+  "Name": "All Stablecoins",
+  "Market Cap": 270170085933.71,
+  "Trend (%)": -1.23,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac55"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDT",
+  "Name": "Tether",
+  "Market Cap": 162514982368,
+  "Trend (%)": -1.4,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac56"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDC",
+  "Name": "USDC",
+  "Market Cap": 64637125773,
+  "Trend (%)": -1.53,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac57"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDS",
+  "Name": "USDS",
+  "Market Cap": 7458495769,
+  "Trend (%)": -1.06,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac58"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDE",
+  "Name": "Ethena USDe",
+  "Market Cap": 7000749080,
+  "Trend (%)": -2.64,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac59"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "BSC-USD",
+  "Name": "Binance Bridged USDT (BNB Smart Chain)",
+  "Market Cap": 6788557269,
+  "Trend (%)": 0.73,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac5a"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USD1",
+  "Name": "USD1",
+  "Market Cap": 2208816190,
+  "Trend (%)": 1.65,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac5b"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDTB",
+  "Name": "USDtb",
+  "Market Cap": 1452298120,
+  "Trend (%)": -0.24,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac5c"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "FDUSD",
+  "Name": "First Digital USD",
+  "Market Cap": 1406612278,
+  "Trend (%)": -2.05,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac5d"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "PYUSD",
+  "Name": "PayPal USD",
+  "Market Cap": 843790300,
+  "Trend (%)": 2.24,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac5e"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDX",
+  "Name": "Stables Labs USDX",
+  "Market Cap": 674588817,
+  "Trend (%)": 1.67,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac5f"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDF",
+  "Name": "Falcon USD",
+  "Market Cap": 659532420,
+  "Trend (%)": -0.15,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac60"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USD0",
+  "Name": "Usual USD",
+  "Market Cap": 580609393,
+  "Trend (%)": 1.54,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac61"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDD",
+  "Name": "USDD",
+  "Market Cap": 536908260,
+  "Trend (%)": 2.02,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac62"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "TUSD",
+  "Name": "TrueUSD",
+  "Market Cap": 494086994,
+  "Trend (%)": 2.14,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac63"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDB",
+  "Name": "USDB",
+  "Market Cap": 404454673,
+  "Trend (%)": -0.52,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac64"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDG",
+  "Name": "Global Dollar",
+  "Market Cap": 321496064,
+  "Trend (%)": -0.41,
+  "Trend direction": "down"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac65"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDO",
+  "Name": "OpenEden OpenDollar",
+  "Market Cap": 291008464,
+  "Trend (%)": 0.65,
+  "Trend direction": "up"
+},
+{
+  "_id": {
+    "$oid": "68834c40c38d19dea178ac66"
+  },
+  "Date": {
+    "$date": "2025-07-25T00:00:00.000Z"
+  },
+  "Symbol": "USDA",
+  "Name": "USDa",
+  "Market Cap": 213228000,
+  "Trend (%)": 1.64,
+  "Trend direction": "up"
+}]

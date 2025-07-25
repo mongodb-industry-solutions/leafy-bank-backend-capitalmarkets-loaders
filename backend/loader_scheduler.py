@@ -28,6 +28,8 @@ from loaders.subreddit_praw_cleaner import SubredditPrawCleaner
 
 from loaders.portfolio_performance_load import PorfolioPerformanceLoad
 
+from loaders.coingecko_stablecoin_market_cap import CoingeckoStablecoinMarketCap
+
 from scheduler import Scheduler
 import scheduler.trigger as trigger
 import pytz
@@ -265,6 +267,20 @@ class LoaderScheduler:
         except Exception as e:
             logger.error(f"Error during portfolio performance data processing: {str(e)}")
 
+    def run_coingecko_stablecoin_market_cap_data(self):
+        """
+        Runs the daily extraction of Coingecko Stablecoin Market Cap data.
+        """
+        logger.info("Starting Coingecko Stablecoin Market Cap data extraction")
+        try:
+            # Initialize Coingecko Stablecoin Market Cap Extractor
+            extractor = CoingeckoStablecoinMarketCap()
+            # Run the daily extraction
+            result = extractor.run_daily_extraction()
+            logger.info(f"Coingecko Stablecoin Market Cap message: {result}")
+        except Exception as e:
+            logger.error(f"Error during Coingecko Stablecoin Market Cap data extraction: {str(e)}")
+
     def schedule_jobs(self):
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
@@ -295,8 +311,12 @@ class LoaderScheduler:
         portfolio_performance_insert_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
         self.scheduler.daily(portfolio_performance_insert_time, self.run_insert_portfolio_performance_yesterday_data)
 
+        # Schedule Coingecko Stablecoin Market Cap data extraction
+        coingecko_stablecoin_market_cap_time = dt.time(hour=4, minute=15, tzinfo=timezone.utc)
+        self.scheduler.daily(coingecko_stablecoin_market_cap_time, self.run_coingecko_stablecoin_market_cap_data)
+
         # Schedule Subreddit PRAW data processing
-        subreddit_praw_data_processing_time = dt.time(hour=4, minute=15, tzinfo=timezone.utc)
+        subreddit_praw_data_processing_time = dt.time(hour=4, minute=20, tzinfo=timezone.utc)
         self.scheduler.daily(subreddit_praw_data_processing_time, self.run_subreddit_praw_data_processing)
 
         # Schedule Subreddit PRAW data embedder only
