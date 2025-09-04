@@ -20,8 +20,9 @@ class BinanceAPICleaner(MongoDBConnector):
         """
         Initializes the BinanceAPICleaner.
         """
-        super().__init__(uri, database_name, appname)
-        self.collection_name = collection_name or os.getenv("BINANCE_TIMESERIES_COLLECTION", "binanceCryptoData")
+        collection_name = collection_name or os.getenv("BINANCE_TIMESERIES_COLLECTION", "binanceCryptoData")
+        super().__init__(uri, database_name, collection_name, appname)
+        self.collection_name = collection_name
         logger.info("BinanceAPICleaner initialized using collection: %s", self.collection_name)
 
     def normalize_symbol(self, symbol: str) -> str:

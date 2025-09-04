@@ -27,7 +27,7 @@ class SubredditPrawWrapper(MongoDBConnector):
         load_dotenv()
         
         # Initialize MongoDB connection
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, None, appname)
         self.mappings_collection_name = mappings_collection_name
         self.submissions_collection_name = submissions_collection_name
         logger.info(f"Using MongoDB collection '{self.mappings_collection_name}' for asset mappings")

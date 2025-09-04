@@ -26,7 +26,7 @@ class VectorSearchIDXCreator(MongoDBConnector):
             database_name (str, optional): Database name. Default parent class value.
             appname (str, optional): Application name. Default parent class value.
         """
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, collection_name, appname)
         self.collection_name = collection_name
         self.collection = self.get_collection(self.collection_name)
         logger.info("VectorSearchIDXCreator initialized")

@@ -20,8 +20,9 @@ class YFinanceTickersCleaner(MongoDBConnector):
         """
         Initializes the YFinanceTickersCleaner.
         """
-        super().__init__(uri, database_name, appname)
-        self.collection_name = collection_name or os.getenv("YFINANCE_MARKET_DATA_COLLECTION", "yfinanceMarketData")
+        collection_name = collection_name or os.getenv("YFINANCE_MARKET_DATA_COLLECTION", "yfinanceMarketData")
+        super().__init__(uri, database_name, collection_name, appname)
+        self.collection_name = collection_name
         logger.info("YFinanceTickersCleaner initialized using collection: %s", self.collection_name)
 
     def get_tickers(self):

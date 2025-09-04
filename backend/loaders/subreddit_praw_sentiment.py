@@ -24,7 +24,7 @@ class SubredditPrawSentiment(MongoDBConnector):
         load_dotenv()
         
         # Initialize MongoDB connection
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, submissions_collection_name, appname)
         self.submissions_collection_name = submissions_collection_name
         logger.info(f"Using MongoDB collection '{self.submissions_collection_name}' for subreddit submissions")
         
