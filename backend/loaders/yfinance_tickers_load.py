@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime, time, timedelta
 import pytz
-from loaders.db.mdb import MongoDBConnector
+from loaders.db.mdb import MongoDBConnector, retry_on_connection_error
 import logging
 import os
 from bson import json_util
@@ -24,10 +24,11 @@ class YFinanceTickersLoad(MongoDBConnector):
             appname (str, optional): Application name. Defaults to None.
             collection_name (str, optional): Collection name. Defaults to "yfinanceMarketData".
         """
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, collection_name, appname)
         self.collection_name = collection_name
         logger.info("YFinanceTickersLoad initialized")
 
+    @retry_on_connection_error()
     def delete_existing_data(self, symbol: str, date: datetime):
         """
         Deletes existing data for the specified symbol and date.
@@ -63,6 +64,7 @@ class YFinanceTickersLoad(MongoDBConnector):
             ticker = ticker.lstrip("^")
         return ticker
 
+    @retry_on_connection_error()
     def insert_market_data(self, df: pd.DataFrame) -> dict:
         """
         Inserts the transformed DataFrame into the MongoDB time-series collection.
@@ -107,6 +109,7 @@ class YFinanceTickersLoad(MongoDBConnector):
             logger.error(f"Error inserting data into collection {self.collection_name}: {e}")
             return {"inserted_count": 0}
 
+    @retry_on_connection_error()
     def recover_last_day_data(self, symbol: str, start_date: str) -> pd.DataFrame:
         """
         Recovers the last available data from MongoDB for the given symbol.

@@ -29,7 +29,7 @@ class TimeSeriesCollectionCreator(MongoDBConnector):
         appname (str, optional): Application name. Default parent class value.
     """
     def __init__(self, uri=None, database_name=None, appname=None):
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, None, appname)
 
     def create_timeseries_collection(self, collection_name: str, time_field: str, meta_field: str, granularity: str = "minutes", expire_after_seconds=None):
         """

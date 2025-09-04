@@ -23,7 +23,7 @@ class PorfolioPerformanceLoad(MongoDBConnector):
             appname (str, optional): Application name. Defaults to None.
             collection_name (str, optional): Collection name. Defaults to "portfolio_performance".
         """
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, collection_name, appname)
         self.collection_name = collection_name
         logger.info("PorfolioPerformanceLoad initialized")
     

@@ -6,6 +6,8 @@ from loader_service import LoaderService
 from pydantic import BaseModel, field_validator
 from datetime import datetime, timezone
 import threading
+import asyncio
+from typing import Optional
 
 # Configure logging
 logging.basicConfig(
@@ -26,16 +28,134 @@ app.add_middleware(
 
 router = APIRouter()
 
+# Global service instances - initialized on startup
+loader_service: Optional[LoaderService] = None
+scheduler: Optional[LoaderScheduler] = None
+scheduler_thread: Optional[threading.Thread] = None
+services_initialized = False
+
 @app.get("/")
 async def read_root(request: Request):
-    return {"message": "Server is running"}
+    return {"message": "Server is running", "services_initialized": services_initialized}
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint that verifies service status and MongoDB connectivity.
+    """
+    health_status = {
+        "status": "healthy",
+        "services_initialized": services_initialized,
+        "mongodb_connected": False,
+        "scheduler_running": False,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    try:
+        # Check if services are initialized
+        if not services_initialized or loader_service is None:
+            health_status["status"] = "initializing"
+            return health_status
+        
+        # Check MongoDB connectivity
+        from loaders.db.mdb import MongoDBConnectionFactory
+        try:
+            db = MongoDBConnectionFactory.get_database(max_retry_time=5)
+            db.client.admin.command('ping')
+            health_status["mongodb_connected"] = True
+        except Exception as e:
+            health_status["status"] = "unhealthy"
+            health_status["mongodb_error"] = str(e)
+        
+        # Check scheduler status
+        if scheduler_thread and scheduler_thread.is_alive():
+            health_status["scheduler_running"] = True
+        else:
+            health_status["status"] = "degraded"
+            
+    except Exception as e:
+        health_status["status"] = "unhealthy"
+        health_status["error"] = str(e)
+    
+    # Set appropriate HTTP status code
+    status_code = 200 if health_status["status"] == "healthy" else 503
+    
+    return health_status
+
+async def initialize_services():
+    """
+    Initialize services with retry logic. Runs in background to not block startup.
+    """
+    global loader_service, scheduler, scheduler_thread, services_initialized
+    
+    max_retries = 60  # Retry for up to 10 minutes (60 * 10 seconds)
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            logger.info("Attempting to initialize services...")
+            
+            # Initialize loader service
+            loader_service = LoaderService()
+            logger.info("LoaderService initialized successfully")
+            
+            # Initialize and start scheduler
+            scheduler = LoaderScheduler()
+            scheduler_thread = threading.Thread(target=scheduler.start, daemon=True)
+            scheduler_thread.start()
+            logger.info("LoaderScheduler started successfully")
+            
+            services_initialized = True
+            logger.info("All services initialized successfully")
+            return
+            
+        except Exception as e:
+            retry_count += 1
+            logger.error(f"Failed to initialize services (attempt {retry_count}/{max_retries}): {e}")
+            if retry_count < max_retries:
+                await asyncio.sleep(10)  # Wait 10 seconds before retry
+            else:
+                logger.critical("Failed to initialize services after maximum retries")
+                # Services will remain uninitialized, but app continues running
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Startup event that initializes services in the background.
+    """
+    logger.info("Starting application...")
+    asyncio.create_task(initialize_services())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    Shutdown event that cleans up resources.
+    """
+    logger.info("Shutting down application...")
+    
+    # Close MongoDB connections
+    try:
+        from loaders.db.mdb import MongoDBConnectionFactory
+        MongoDBConnectionFactory.close_cached_client()
+    except Exception as e:
+        logger.error(f"Error during MongoDB cleanup: {e}")
+    
+    logger.info("Application shutdown complete")
+
+def get_loader_service() -> LoaderService:
+    """
+    Get the loader service instance with initialization check.
+    """
+    if not services_initialized or loader_service is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Service is still initializing. Please try again in a few moments."
+        )
+    return loader_service
 
 ############################
 ### -- LOADER SERVICE -- ###
 ############################
-
-# Initialize service
-loader_service = LoaderService()
 
 class DateRequest(BaseModel):
     date_str: str
@@ -83,7 +203,8 @@ class BackfillSeriesRequest(BackfillRequest):
 @app.post("/load-yfinance-market-data")
 async def load_yfinance_market_data(date_str: DateRequest):
     try:
-        loader_service.load_yfinance_market_data(date_str.date_str)
+        service = get_loader_service()
+        service.load_yfinance_market_data(date_str.date_str)
         return {"message": f"Yahoo Finance market data loading process completed for date {date_str.date_str}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -95,7 +216,8 @@ async def load_yfinance_market_data(date_str: DateRequest):
 @app.post("/load-yfinance-market-data-by-symbol")
 async def load_yfinance_market_data_by_symbol(request: SymbolRequest):
     try:
-        loader_service.load_yfinance_market_data_by_symbol(request.date_str, request.symbol)
+        service = get_loader_service()
+        service.load_yfinance_market_data_by_symbol(request.date_str, request.symbol)
         return {"message": f"Yahoo Finance market data loading process completed for symbol {request.symbol} on date {request.date_str}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -111,7 +233,8 @@ async def load_yfinance_market_data_by_symbol(request: SymbolRequest):
 @app.post("/load-binance-api-crypto-data")
 async def load_binance_api_crypto_data(date_str: DateRequest):
     try:
-        loader_service.load_binance_api_crypto_data(date_str.date_str)
+        service = get_loader_service()
+        service.load_binance_api_crypto_data(date_str.date_str)
         return {"message": f"Binance API crypto data loading process completed for date {date_str.date_str}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -123,7 +246,8 @@ async def load_binance_api_crypto_data(date_str: DateRequest):
 @app.post("/load-binance-api-crypto-data-by-symbol")
 async def load_binance_api_crypto_data_by_symbol(request: SymbolRequest):
     try:
-        loader_service.load_binance_api_crypto_data_by_symbol(request.date_str, request.symbol)
+        service = get_loader_service()
+        service.load_binance_api_crypto_data_by_symbol(request.date_str, request.symbol)
         return {"message": f"Binance API crypto data loading process completed for symbol {request.symbol} on date {request.date_str}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -139,7 +263,8 @@ async def load_binance_api_crypto_data_by_symbol(request: SymbolRequest):
 @app.post("/load-pyfredapi-macroeconomic-data")
 async def load_pyfredapi_macroeconomic_data(date_str: DateRequest):
     try:
-        loader_service.load_pyfredapi_macroeconomic_data(date_str.date_str)
+        service = get_loader_service()
+        service.load_pyfredapi_macroeconomic_data(date_str.date_str)
         return {"message": f"PyFredAPI macroeconomic data loading process completed for date {date_str.date_str}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -151,7 +276,8 @@ async def load_pyfredapi_macroeconomic_data(date_str: DateRequest):
 @app.post("/load-pyfredapi-macroeconomic-data-by-series")
 async def load_pyfredapi_macroeconomic_data_by_series(request: SeriesRequest):
     try:
-        loader_service.load_pyfredapi_macroeconomic_data_by_series(request.date_str, request.series_id)
+        service = get_loader_service()
+        service.load_pyfredapi_macroeconomic_data_by_series(request.date_str, request.series_id)
         return {"message": f"PyFredAPI macroeconomic data loading process completed for series ID {request.series_id} on date {request.date_str}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -248,7 +374,8 @@ async def backfill_portfolio_performance_data(request: BackfillRequest):
 @app.post("/backfill-yfinance-market-data")
 async def backfill_yfinance_market_data(request: BackfillRequest):
     try:
-        loader_service.backfill_yfinance_market_data(request.start_date, request.end_date)
+        service = get_loader_service()
+        service.backfill_yfinance_market_data(request.start_date, request.end_date)
         return {"message": f"Backfill for Yahoo Finance market data completed from {request.start_date} to {request.end_date}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -260,7 +387,8 @@ async def backfill_yfinance_market_data(request: BackfillRequest):
 @app.post("/backfill-yfinance-market-data-by-symbol")
 async def backfill_yfinance_market_data_by_symbol(request: BackfillSymbolRequest):
     try:
-        loader_service.backfill_yfinance_market_data_by_symbol(request.start_date, request.end_date, request.symbol)
+        service = get_loader_service()
+        service.backfill_yfinance_market_data_by_symbol(request.start_date, request.end_date, request.symbol)
         return {"message": f"Backfill for Yahoo Finance market data for symbol {request.symbol} completed from {request.start_date} to {request.end_date}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -276,7 +404,8 @@ async def backfill_yfinance_market_data_by_symbol(request: BackfillSymbolRequest
 @app.post("/backfill-binance-api-crypto-data")
 async def backfill_binance_api_crypto_data(request: BackfillRequest):
     try:
-        loader_service.backfill_binance_api_crypto_data(request.start_date, request.end_date)
+        service = get_loader_service()
+        service.backfill_binance_api_crypto_data(request.start_date, request.end_date)
         return {"message": f"Backfill for Binance API crypto data completed from {request.start_date} to {request.end_date}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -288,7 +417,8 @@ async def backfill_binance_api_crypto_data(request: BackfillRequest):
 @app.post("/backfill-binance-api-crypto-data-by-symbol")
 async def backfill_binance_api_crypto_data_by_symbol(request: BackfillSymbolRequest):
     try:
-        loader_service.backfill_binance_api_crypto_data_by_symbol(request.start_date, request.end_date, request.symbol)
+        service = get_loader_service()
+        service.backfill_binance_api_crypto_data_by_symbol(request.start_date, request.end_date, request.symbol)
         return {"message": f"Backfill for Binance API crypto data for symbol {request.symbol} completed from {request.start_date} to {request.end_date}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -304,7 +434,8 @@ async def backfill_binance_api_crypto_data_by_symbol(request: BackfillSymbolRequ
 @app.post("/backfill-pyfredapi-macroeconomic-data")
 async def backfill_pyfredapi_macroeconomic_data(request: BackfillRequest):
     try:
-        loader_service.backfill_pyfredapi_macroeconomic_data(request.start_date, request.end_date)
+        service = get_loader_service()
+        service.backfill_pyfredapi_macroeconomic_data(request.start_date, request.end_date)
         return {"message": f"Backfill for PyFredAPI macroeconomic data completed from {request.start_date} to {request.end_date}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -316,7 +447,8 @@ async def backfill_pyfredapi_macroeconomic_data(request: BackfillRequest):
 @app.post("/backfill-pyfredapi-macroeconomic-data-by-series")
 async def backfill_pyfredapi_macroeconomic_data_by_series(request: BackfillSeriesRequest):
     try:
-        loader_service.backfill_pyfredapi_macroeconomic_data_by_series(request.start_date, request.end_date, request.series_id)
+        service = get_loader_service()
+        service.backfill_pyfredapi_macroeconomic_data_by_series(request.start_date, request.end_date, request.series_id)
         return {"message": f"Backfill for PyFredAPI macroeconomic data for series ID {request.series_id} completed from {request.start_date} to {request.end_date}"}
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
@@ -332,7 +464,8 @@ async def backfill_pyfredapi_macroeconomic_data_by_series(request: BackfillSerie
 @app.post("/load-recent-financial-news")
 async def load_recent_financial_news():
     try:
-        loader_service.load_recent_financial_news()
+        service = get_loader_service()
+        service.load_recent_financial_news()
         return {"message": "Financial News processing completed"}
     except Exception as e:
         logging.error(f"Error loading recent financial news: {str(e)}")
@@ -345,7 +478,8 @@ async def load_recent_financial_news():
 @app.post("/load-recent-subreddit-praw-data")
 async def load_recent_subreddit_praw_data():
     try:
-        loader_service.load_recent_subreddit_praw_data()
+        service = get_loader_service()
+        service.load_recent_subreddit_praw_data()
         return {"message": "Subreddit PRAW data processing completed!"}
     except Exception as e:
         logging.error(f"Error loading Subreddit PRAW data: {str(e)}")
@@ -354,7 +488,8 @@ async def load_recent_subreddit_praw_data():
 @app.post("/subreddit-praw-embedder-only")
 async def subreddit_praw_embedder_only():
     try:
-        loader_service.subreddit_praw_embedder_only()
+        service = get_loader_service()
+        service.subreddit_praw_embedder_only()
         return {"message": "Subreddit PRAW embedder only process completed!"}
     except Exception as e:
         logging.error(f"Error performing Subreddit PRAW embedder only: {str(e)}")
@@ -363,7 +498,8 @@ async def subreddit_praw_embedder_only():
 @app.post("/subreddit-praw-sentiment-only")
 async def subreddit_praw_sentiment_only():
     try:
-        loader_service.subreddit_praw_sentiment_only()
+        service = get_loader_service()
+        service.subreddit_praw_sentiment_only()
         return {"message": "Subreddit PRAW sentiment analysis process completed!"}
     except Exception as e:
         logging.error(f"Error performing Subreddit PRAW sentiment analysis: {str(e)}")
@@ -372,7 +508,8 @@ async def subreddit_praw_sentiment_only():
 @app.post("/subreddit-praw-cleaner-only")
 async def subreddit_praw_cleaner_only():
     try:
-        loader_service.subreddit_praw_cleaner_only()
+        service = get_loader_service()
+        service.subreddit_praw_cleaner_only()
         return {"message": "Subreddit PRAW cleaner only process completed!"}
     except Exception as e:
         logging.error(f"Error performing Subreddit PRAW cleaner only: {str(e)}")
@@ -385,6 +522,11 @@ async def subreddit_praw_cleaner_only():
 @app.get("/scheduler-overview")
 async def scheduler_overview():
     try:
+        if not services_initialized or scheduler is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Scheduler is still initializing. Please try again in a few moments."
+            )
         overview = str(scheduler.scheduler)
         overview_lines = overview.split("\n")
         overview_dict = {
@@ -471,9 +613,4 @@ async def scheduler_overview():
         logger.error(f"Error generating scheduler overview: {e}")
         return {"error": "Failed to generate scheduler overview"}
 
-def start_scheduler():
-    scheduler.start()
-
-scheduler = LoaderScheduler()
-scheduler_thread = threading.Thread(target=start_scheduler)
-scheduler_thread.start()
+# Scheduler initialization moved to startup_event

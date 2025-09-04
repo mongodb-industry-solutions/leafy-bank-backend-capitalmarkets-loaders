@@ -20,7 +20,7 @@ class SubredditPrawCleaner(MongoDBConnector):
         """
         Initializes the SubredditPrawCleaner.
         """
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, None, appname)
         self.submissions_collection_name = submissions_collection_name or os.getenv("SUBREDDIT_SUBMISSIONS_COLLECTION", "subredditSubmissions")
         self.mappings_collection_name = mappings_collection_name or os.getenv("ASSET_MAPPINGS_COLLECTION", "assetMappings")
         logger.info("SubredditPrawCleaner initialized using submissions collection: %s", self.submissions_collection_name)

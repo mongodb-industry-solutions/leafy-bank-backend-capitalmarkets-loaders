@@ -29,7 +29,7 @@ class YFinanceTickersBackup(MongoDBConnector):
             appname (str, optional): Application name.
             collection_name (str, optional): Collection name. Defaults to "yfinanceMarketData".
         """
-        super().__init__(uri, database_name, appname)
+        super().__init__(uri, database_name, collection_name, appname)
         self.collection_name = collection_name
         logger.info("YFinanceTickersBackup initialized")
     
