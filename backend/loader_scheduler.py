@@ -284,7 +284,19 @@ class LoaderScheduler:
     def schedule_jobs(self):
         """
         Schedules the ETL process and financial news processing to run from Tuesday to Saturday using UTC time.
+        Jobs are only scheduled when NODE_ENV == "prod". For "dev" and "staging" environments, scheduling is skipped.
         """
+        # Get NODE_ENV to determine if jobs should be scheduled
+        node_env = os.getenv("NODE_ENV", "").lower()
+        
+        # Only schedule jobs in production environment
+        if node_env != "prod":
+            logger.info(f"Skipping job scheduling - NODE_ENV={node_env} (jobs only run in 'prod' environment)")
+            logger.info("Scheduled jobs configured! (no jobs scheduled)")
+            return
+        
+        logger.info(f"Scheduling jobs for production environment (NODE_ENV={node_env})")
+        
         # Schedule Financial News processing on Mondays
         # NOTE: It runs only once a week on Mondays at 04:00 UTC. The reasons are:
         # 1. To avoid unnecessary recurrent scraping of news articles. For some assets, there may not be enough news articles to scrape daily.
@@ -347,8 +359,16 @@ class LoaderScheduler:
         Starts the scheduler.
         """
         self.schedule_jobs()
-        logger.info("Schedule Jobs overview:")
-        logger.info(self.scheduler)
+        
+        # Get NODE_ENV to log appropriate message
+        node_env = os.getenv("NODE_ENV", "").lower()
+        
+        if node_env == "prod":
+            logger.info("Schedule Jobs overview:")
+            logger.info(self.scheduler)
+        else:
+            logger.info(f"Scheduler started but no jobs scheduled (NODE_ENV={node_env}). API endpoints remain available for manual data loading.")
+        
         while True:
             self.scheduler.exec_jobs()
             time.sleep(1)

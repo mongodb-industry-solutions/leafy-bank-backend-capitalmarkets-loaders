@@ -239,10 +239,10 @@ COINGECKO_STABLECOIN_COLLECTION = "stablecoin_market_caps"
 To start the backend service, run:
 
 ```bash
-poetry run uvicorn main:app --host 0.0.0.0 --port 8004
+poetry run uvicorn main:app --host 0.0.0.0 --port 8080
 ```
 
-> Default port is `8004`, modify the `--port` flag if needed.
+> Default port is `8080`, modify the `--port` flag if needed.
 
 ## Running with Docker
 
@@ -265,7 +265,7 @@ The service provides a comprehensive set of API endpoints for managing data load
 ```
 http://localhost:<PORT_NUMBER>/docs
 ```
-E.g. `http://localhost:8004/docs`
+E.g. `http://localhost:8080/docs`
 
 The API includes endpoints for:
 - Loading and backfilling Yahoo Finance market data (by date or symbol)
@@ -284,6 +284,6 @@ The API includes endpoints for:
 
 - Check that you've created an `.env` file that contains the required environment variables.
 
-## 📄 **License**
+## 📄 License
 
-This project is for educational and demonstration purposes. 
+See [LICENSE](LICENSE) file for details.
