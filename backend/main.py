@@ -527,6 +527,21 @@ async def scheduler_overview():
                 status_code=503,
                 detail="Scheduler is still initializing. Please try again in a few moments."
             )
+        
+        # Check NODE_ENV - return early if not production
+        import os
+        node_env = os.getenv("NODE_ENV", "").lower()
+        if node_env != "prod":
+            return {
+                "overview": {
+                    "max_exec": "N/A",
+                    "tzinfo": "UTC",
+                    "priority_function": "N/A",
+                    "jobs": [],
+                    "message": f"No jobs scheduled (NODE_ENV={node_env}, jobs only run in 'prod')"
+                }
+            }
+        
         overview = str(scheduler.scheduler)
         overview_lines = overview.split("\n")
         overview_dict = {

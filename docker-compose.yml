@@ -6,6 +6,6 @@ services:
       dockerfile: Dockerfile.backend
     image: capitalmarkets-loaders-image:latest
     ports:
-      - "8000:8000"
+      - "8080:8080"
     restart: always
     container_name: capitalmarkets-loaders-container
