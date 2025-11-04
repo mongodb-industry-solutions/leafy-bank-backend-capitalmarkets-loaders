@@ -1,0 +1,36 @@
+env:
+  NODE_ENV: staging
+  
+envSecrets:
+  MONGODB_URI: capitalmarkets-loaders
+  DATABASE_NAME: capitalmarkets-loaders
+  APP_NAME: capitalmarkets-loaders
+  VOYAGE_API_KEY: capitalmarkets-loaders
+  FRED_API_KEY: capitalmarkets-loaders
+  PORTFOLIO_PERFORMANCE_COLLECTION: capitalmarkets-loaders
+  YFINANCE_TIMESERIES_COLLECTION: capitalmarkets-loaders
+  BINANCE_TIMESERIES_COLLECTION: capitalmarkets-loaders
+  PYFREDAPI_COLLECTION: capitalmarkets-loaders
+  NEWS_COLLECTION: capitalmarkets-loaders
+  VECTOR_INDEX_NAME: capitalmarkets-loaders
+  VECTOR_FIELD: capitalmarkets-loaders
+  SCRAPE_NUM_ARTICLES: capitalmarkets-loaders
+  REDDIT_CLIENT_ID: capitalmarkets-loaders
+  REDDIT_SECRET: capitalmarkets-loaders
+  REDDIT_USERNAME: capitalmarkets-loaders
+  REDDIT_PASSWORD: capitalmarkets-loaders
+  REDDIT_USER_AGENT: capitalmarkets-loaders
+  REDDIT_REDIRECT_URI: capitalmarkets-loaders
+  REDDIT_STATE_RANDOM_STRING: capitalmarkets-loaders
+  REDDIT_PERMANENT_AUTHORIZATION_CODE: capitalmarkets-loaders
+  REDDIT_AUTH_URI: capitalmarkets-loaders
+  ASSET_MAPPINGS_COLLECTION: capitalmarkets-loaders
+  SUBREDDIT_SUBMISSIONS_COLLECTION: capitalmarkets-loaders
+  COINGECKO_STABLECOIN_COLLECTION: capitalmarkets-loaders
+  NODE_ENV: capitalmarkets-loaders
+
+serviceAccount:
+  enabled: true
+  irsa:
+    accountId: "275662791714"
+    roleName: "kanopy-staging-cicd-irsa"
