@@ -9,7 +9,7 @@ import threading
 import asyncio
 from typing import Optional
 
-# Configure logging
+# Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
