@@ -7,7 +7,7 @@ from pydantic import BaseModel, field_validator
 from datetime import datetime, timezone
 import threading
 import asyncio
-from typing import Optional
+from typing import Optional, Literal
 
 # Logging
 logging.basicConfig(
@@ -303,64 +303,76 @@ async def load_coingecko_stablecoin_market_cap_data():
         raise HTTPException(status_code=500, detail=str(e))
     
 ####################################
-# PORTFOLIO PERFORMANCE
+# PORTFOLIO PERFORMANCE (BIAN: InvestmentPortfolioAnalysis / PerformanceAnalysis)
 ####################################
-    
-@app.post("/insert-portfolio-performance-yesterday-data")
-async def insert_portfolio_performance_yesterday_data():
-    """
-    Loads portfolio performance data for yesterday.
-    This endpoint doesn't require any input parameters as it works with yesterday's date.
-    """
-    try:
-        result = loader_service.insert_portfolio_performance_yesterday_data()
-        if result["status"] == "exists":
-            return {"message": "Portfolio performance data for yesterday already exists, no action taken"}
-        else:
-            return {"message": "Portfolio performance data for yesterday successfully loaded", "data": result}
-    except Exception as e:
-        logging.error(f"Error loading portfolio performance data for yesterday: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/insert-portfolio-performance-data-for-date")
-async def insert_portfolio_performance_data_for_date(date_str: DateRequest):
-    """
-    Loads portfolio performance data for a specific date.
-    """
-    try:
-        result = loader_service.insert_portfolio_performance_data_for_date(date_str.date_str)
-        if result["status"] == "error":
-            raise ValueError(result["message"])
-        elif result["status"] == "exists":
-            return {"message": f"Portfolio performance data for {date_str.date_str} already exists, no action taken"}
-        else:
-            return {"message": f"Portfolio performance data for {date_str.date_str} successfully loaded", "data": result}
-    except ValueError as ve:
-        logging.error(f"Validation error: {str(ve)}")
-        raise HTTPException(status_code=400, detail=str(ve))
-    except Exception as e:
-        logging.error(f"Error loading portfolio performance data for date: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+def _validate_yyyymmdd(value: str, *, allow_future: bool = False) -> str:
+    """Validate an 8-digit YYYYMMDD date string (same rules as the legacy DateRequest)."""
+    if not value or not value.isdigit() or len(value) != 8:
+        raise ValueError("date must be in '%Y%m%d' format")
+    datetime.strptime(value, "%Y%m%d")  # raises on an invalid calendar date
+    if not allow_future and value >= datetime.now(timezone.utc).strftime("%Y%m%d"):
+        raise ValueError("date cannot be the current date or a future date")
+    return value
 
-@app.post("/backfill-portfolio-performance-data")
-async def backfill_portfolio_performance_data(request: BackfillRequest):
+class PerformanceExecuteRequest(BaseModel):
+    mode: Literal["yesterday", "date", "backfill"]
+    date: Optional[str] = None
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+
+@app.post("/InvestmentPortfolioAnalysis/{portfolio_id}/PerformanceAnalysis/Execute")
+async def execute_portfolio_performance(portfolio_id: str, request: PerformanceExecuteRequest):
     """
-    Backfills portfolio performance data for a specific date range.
+    Compute and persist portfolio performance for a portfolio instance.
+
+    Dispatched by `mode`:
+      - "yesterday" — insert yesterday's performance (no extra params).
+      - "date"      — insert performance for `date` (YYYYMMDD, past only).
+      - "backfill"  — backfill the `startDate`..`endDate` range (YYYYMMDD).
     """
     try:
-        result = loader_service.backfill_portfolio_performance_data(request.start_date, request.end_date)
+        service = get_loader_service()
+
+        if request.mode == "yesterday":
+            result = service.insert_portfolio_performance_yesterday_data()
+            if result["status"] == "exists":
+                return {"message": "Portfolio performance data for yesterday already exists, no action taken"}
+            # Echo only JSON-safe fields — the service's `data` blob carries the inserted doc's
+            # ObjectId (`_id`), which FastAPI's default encoder can't serialize.
+            return {"message": "Portfolio performance data for yesterday successfully loaded", "insertedId": result.get("inserted_id")}
+
+        if request.mode == "date":
+            if request.date is None:
+                raise ValueError("date is required when mode='date'")
+            date_str = _validate_yyyymmdd(request.date)
+            result = service.insert_portfolio_performance_data_for_date(date_str)
+            if result["status"] == "error":
+                raise ValueError(result["message"])
+            if result["status"] == "exists":
+                return {"message": f"Portfolio performance data for {date_str} already exists, no action taken"}
+            return {"message": f"Portfolio performance data for {date_str} successfully loaded", "insertedId": result.get("inserted_id")}
+
+        # mode == "backfill"
+        if request.startDate is None or request.endDate is None:
+            raise ValueError("startDate and endDate are required when mode='backfill'")
+        start_date = _validate_yyyymmdd(request.startDate, allow_future=True)
+        end_date = _validate_yyyymmdd(request.endDate, allow_future=True)
+        result = service.backfill_portfolio_performance_data(start_date, end_date)
         if result["status"] == "error":
             raise ValueError(result["message"])
         return {
-            "message": f"Backfill for portfolio performance data completed from {request.start_date} to {request.end_date}",
+            "message": f"Backfill for portfolio performance data completed from {start_date} to {end_date}",
             "inserted_count": result.get("inserted_count", 0),
             "skipped_count": result.get("skipped_count", 0)
         }
     except ValueError as ve:
         logging.error(f"Validation error: {str(ve)}")
         raise HTTPException(status_code=400, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"Error backfilling portfolio performance data: {str(e)}")
+        logging.error(f"Error executing portfolio performance ({request.mode}): {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 ####################################
