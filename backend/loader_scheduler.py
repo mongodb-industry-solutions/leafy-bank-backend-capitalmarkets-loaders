@@ -304,11 +304,11 @@ class LoaderScheduler:
         # 3. Minimize delays on calculating sentiment scores.
         # 4. Have better control over user flow and experience.
         # In real-world scenarios, you will have your own dataset or data retrieval/ingestion process for financial news.
-        financial_news_extraction_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
+        financial_news_extraction_time = dt.time(hour=6, minute=0, tzinfo=timezone.utc)
         self.scheduler.weekly(trigger.Monday(financial_news_extraction_time), self.run_financial_news_extraction)
 
         # Schedule Yahoo Finance tickers ETL process
-        yfinance_market_data_etl_time = dt.time(hour=4, minute=0, tzinfo=timezone.utc)
+        yfinance_market_data_etl_time = dt.time(hour=6, minute=0, tzinfo=timezone.utc)
         self.scheduler.weekly(trigger.Tuesday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
         self.scheduler.weekly(trigger.Wednesday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
         self.scheduler.weekly(trigger.Thursday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
@@ -316,40 +316,40 @@ class LoaderScheduler:
         self.scheduler.weekly(trigger.Saturday(yfinance_market_data_etl_time), self.run_yfinance_market_data_etl)
 
         # Schedule PyFredAPI ETL process
-        run_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=4, minute=5, tzinfo=timezone.utc)
+        run_pyfredapi_macroeconomic_data_etl_time = dt.time(hour=6, minute=5, tzinfo=timezone.utc)
         self.scheduler.daily(run_pyfredapi_macroeconomic_data_etl_time, self.run_pyfredapi_macroeconomic_data_etl)
 
         # Schedule Portfolio Performance insert
-        portfolio_performance_insert_time = dt.time(hour=4, minute=10, tzinfo=timezone.utc)
+        portfolio_performance_insert_time = dt.time(hour=6, minute=10, tzinfo=timezone.utc)
         self.scheduler.daily(portfolio_performance_insert_time, self.run_insert_portfolio_performance_yesterday_data)
 
         # Schedule Coingecko Stablecoin Market Cap data extraction
-        coingecko_stablecoin_market_cap_time = dt.time(hour=4, minute=15, tzinfo=timezone.utc)
+        coingecko_stablecoin_market_cap_time = dt.time(hour=6, minute=15, tzinfo=timezone.utc)
         self.scheduler.daily(coingecko_stablecoin_market_cap_time, self.run_coingecko_stablecoin_market_cap_data)
 
         # Schedule Subreddit PRAW data processing
-        subreddit_praw_data_processing_time = dt.time(hour=4, minute=20, tzinfo=timezone.utc)
+        subreddit_praw_data_processing_time = dt.time(hour=6, minute=20, tzinfo=timezone.utc)
         self.scheduler.daily(subreddit_praw_data_processing_time, self.run_subreddit_praw_data_processing)
 
         # Schedule Subreddit PRAW data embedder only
         # This job is scheduled to ensure embeddings are generated for new data.
-        subreddit_praw_data_embedder_only_time = dt.time(hour=4, minute=40, tzinfo=timezone.utc)
+        subreddit_praw_data_embedder_only_time = dt.time(hour=6, minute=40, tzinfo=timezone.utc)
         self.scheduler.daily(subreddit_praw_data_embedder_only_time, self.run_subreddit_praw_data_embedder_only)
 
         # Schedule Subreddit PRAW data sentiment analysis only
         # This job is scheduled to ensure sentiment analysis is performed on the latest data.
-        subreddit_praw_data_sentiment_only_time = dt.time(hour=4, minute=45, tzinfo=timezone.utc)
+        subreddit_praw_data_sentiment_only_time = dt.time(hour=6, minute=45, tzinfo=timezone.utc)
         self.scheduler.daily(subreddit_praw_data_sentiment_only_time, self.run_subreddit_praw_data_sentiment_only)
 
         # Schedule Subreddit PRAW data cleaner only
         # This job is scheduled to ensure that the data is cleaned up regularly.
-        subreddit_praw_data_cleaner_only_time = dt.time(hour=5, minute=0, tzinfo=timezone.utc)
+        subreddit_praw_data_cleaner_only_time = dt.time(hour=7, minute=0, tzinfo=timezone.utc)
         self.scheduler.daily(subreddit_praw_data_cleaner_only_time, self.run_subreddit_praw_data_cleaner_only)
 
         ############################################################################
         # NOTE: Configuring this later than the previous jobs to ensure that the data is available on Binance API.
         # Schedule Binance API crypto data ETL process
-        binance_api_crypto_data_etl_time = dt.time(hour=5, minute=10, tzinfo=timezone.utc)
+        binance_api_crypto_data_etl_time = dt.time(hour=7, minute=10, tzinfo=timezone.utc)
         self.scheduler.daily(binance_api_crypto_data_etl_time, self.run_binance_api_crypto_data_etl)
         
         logger.info("Scheduled jobs configured!")

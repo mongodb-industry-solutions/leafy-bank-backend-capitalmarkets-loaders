@@ -1,33 +1,39 @@
+# TEMPORARY — ist-prod green deployment (blue/green cutover).
+# Clone of prod.yaml; the ONLY difference is every envSecrets value points at the
+# green ksec group `capitalmarkets-loaders-bian` instead of `capitalmarkets-loaders`.
+# Deployed by the `production-bian` Drone pipeline on the `prod-green` branch.
+# At Phase 3 this file is renamed to prod.yaml and the temp pipeline is deleted.
+
 env:
   NODE_ENV: prod
-  
+
 envSecrets:
-  MONGODB_URI: capitalmarkets-loaders
-  DATABASE_NAME: capitalmarkets-loaders
-  APP_NAME: capitalmarkets-loaders
-  VOYAGE_API_KEY: capitalmarkets-loaders
-  FRED_API_KEY: capitalmarkets-loaders
-  PORTFOLIO_PERFORMANCE_COLLECTION: capitalmarkets-loaders
-  YFINANCE_TIMESERIES_COLLECTION: capitalmarkets-loaders
-  BINANCE_TIMESERIES_COLLECTION: capitalmarkets-loaders
-  PYFREDAPI_COLLECTION: capitalmarkets-loaders
-  NEWS_COLLECTION: capitalmarkets-loaders
-  VECTOR_INDEX_NAME: capitalmarkets-loaders
-  VECTOR_FIELD: capitalmarkets-loaders
-  SCRAPE_NUM_ARTICLES: capitalmarkets-loaders
-  REDDIT_CLIENT_ID: capitalmarkets-loaders
-  REDDIT_SECRET: capitalmarkets-loaders
-  REDDIT_USERNAME: capitalmarkets-loaders
-  REDDIT_PASSWORD: capitalmarkets-loaders
-  REDDIT_USER_AGENT: capitalmarkets-loaders
-  REDDIT_REDIRECT_URI: capitalmarkets-loaders
-  REDDIT_STATE_RANDOM_STRING: capitalmarkets-loaders
-  REDDIT_PERMANENT_AUTHORIZATION_CODE: capitalmarkets-loaders
-  REDDIT_AUTH_URI: capitalmarkets-loaders
-  ASSET_MAPPINGS_COLLECTION: capitalmarkets-loaders
-  SUBREDDIT_SUBMISSIONS_COLLECTION: capitalmarkets-loaders
-  COINGECKO_STABLECOIN_COLLECTION: capitalmarkets-loaders
-  NODE_ENV: capitalmarkets-loaders
+  MONGODB_URI: capitalmarkets-loaders-bian
+  DATABASE_NAME: capitalmarkets-loaders-bian
+  APP_NAME: capitalmarkets-loaders-bian
+  VOYAGE_API_KEY: capitalmarkets-loaders-bian
+  FRED_API_KEY: capitalmarkets-loaders-bian
+  PORTFOLIO_PERFORMANCE_COLLECTION: capitalmarkets-loaders-bian
+  YFINANCE_TIMESERIES_COLLECTION: capitalmarkets-loaders-bian
+  BINANCE_TIMESERIES_COLLECTION: capitalmarkets-loaders-bian
+  PYFREDAPI_COLLECTION: capitalmarkets-loaders-bian
+  NEWS_COLLECTION: capitalmarkets-loaders-bian
+  VECTOR_INDEX_NAME: capitalmarkets-loaders-bian
+  VECTOR_FIELD: capitalmarkets-loaders-bian
+  SCRAPE_NUM_ARTICLES: capitalmarkets-loaders-bian
+  REDDIT_CLIENT_ID: capitalmarkets-loaders-bian
+  REDDIT_SECRET: capitalmarkets-loaders-bian
+  REDDIT_USERNAME: capitalmarkets-loaders-bian
+  REDDIT_PASSWORD: capitalmarkets-loaders-bian
+  REDDIT_USER_AGENT: capitalmarkets-loaders-bian
+  REDDIT_REDIRECT_URI: capitalmarkets-loaders-bian
+  REDDIT_STATE_RANDOM_STRING: capitalmarkets-loaders-bian
+  REDDIT_PERMANENT_AUTHORIZATION_CODE: capitalmarkets-loaders-bian
+  REDDIT_AUTH_URI: capitalmarkets-loaders-bian
+  ASSET_MAPPINGS_COLLECTION: capitalmarkets-loaders-bian
+  SUBREDDIT_SUBMISSIONS_COLLECTION: capitalmarkets-loaders-bian
+  COINGECKO_STABLECOIN_COLLECTION: capitalmarkets-loaders-bian
+  NODE_ENV: capitalmarkets-loaders-bian
 
 serviceAccount:
   enabled: true
