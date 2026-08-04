@@ -12,8 +12,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Performance series identity in the consolidated portfolioPerformance collection (single
+# shared series; one document per date).
+PERFORMANCE_PORTFOLIO_ID = os.getenv("PERFORMANCE_PORTFOLIO_ID", "PORT-0001")
+
 class PorfolioPerformanceLoad(MongoDBConnector):
-    def __init__(self, uri=None, database_name: str = None, appname: str = None, collection_name: str = os.getenv("PORTFOLIO_PERFORMANCE_COLLECTION", "portfolio_performance")):
+    def __init__(self, uri=None, database_name: str = None, appname: str = None, collection_name: str = os.getenv("PORTFOLIO_PERFORMANCE_COLLECTION", "portfolioPerformance")):
         """
         Porfolio Performance loader for portfolio performance data.
 
@@ -21,7 +25,7 @@ class PorfolioPerformanceLoad(MongoDBConnector):
             uri (str, optional): MongoDB URI. Defaults to None.
             database_name (str, optional): Database name. Defaults to None.
             appname (str, optional): Application name. Defaults to None.
-            collection_name (str, optional): Collection name. Defaults to "portfolio_performance".
+            collection_name (str, optional): Collection name. Defaults to "portfolioPerformance".
         """
         super().__init__(uri, database_name, collection_name, appname)
         self.collection_name = collection_name
@@ -43,10 +47,10 @@ class PorfolioPerformanceLoad(MongoDBConnector):
             
         # Count consecutive positive or negative days
         streak = 1
-        current_trend = "positive" if recent_records[0]["percentage_of_daily_return"] >= 0 else "negative"
+        current_trend = "positive" if recent_records[0]["percentageOfDailyReturn"] >= 0 else "negative"
         
         for i in range(1, len(recent_records)):
-            daily_return = recent_records[i]["percentage_of_daily_return"]
+            daily_return = recent_records[i]["percentageOfDailyReturn"]
             is_positive = daily_return >= 0
             
             if (current_trend == "positive" and is_positive) or (current_trend == "negative" and not is_positive):
@@ -54,7 +58,7 @@ class PorfolioPerformanceLoad(MongoDBConnector):
             else:
                 break
                 
-        return current_trend, streak, recent_records[0]["percentage_of_daily_return"]
+        return current_trend, streak, recent_records[0]["percentageOfDailyReturn"]
     
     def _generate_realistic_daily_return(self, trend, streak_length, last_return):
         """
@@ -143,7 +147,7 @@ class PorfolioPerformanceLoad(MongoDBConnector):
         
         # Calculate new cumulative return based on previous value
         if recent_records:
-            prev_cumulative = recent_records[0].get("percentage_of_cumulative_return", 0)
+            prev_cumulative = recent_records[0].get("percentageOfCumulativeReturn", 0)
             # Calculate cumulative return by adding daily return
             cumulative_return = round(prev_cumulative + daily_return, 2)
         else:
@@ -152,9 +156,10 @@ class PorfolioPerformanceLoad(MongoDBConnector):
         
         # Prepare new document with UTC timestamp
         new_data = {
+            "portfolioId": PERFORMANCE_PORTFOLIO_ID,
             "date": yesterday_start,
-            "percentage_of_daily_return": daily_return,
-            "percentage_of_cumulative_return": cumulative_return
+            "percentageOfDailyReturn": daily_return,
+            "percentageOfCumulativeReturn": cumulative_return
         }
         
         # Insert the document
@@ -214,7 +219,7 @@ class PorfolioPerformanceLoad(MongoDBConnector):
         
         # Calculate new cumulative return based on previous value
         if recent_records:
-            prev_cumulative = recent_records[0].get("percentage_of_cumulative_return", 0)
+            prev_cumulative = recent_records[0].get("percentageOfCumulativeReturn", 0)
             # Calculate cumulative return by adding daily return
             cumulative_return = round(prev_cumulative + daily_return, 2)
         else:
@@ -223,9 +228,10 @@ class PorfolioPerformanceLoad(MongoDBConnector):
         
         # Prepare new document with UTC timestamp
         new_data = {
+            "portfolioId": PERFORMANCE_PORTFOLIO_ID,
             "date": target_date_start,
-            "percentage_of_daily_return": daily_return,
-            "percentage_of_cumulative_return": cumulative_return
+            "percentageOfDailyReturn": daily_return,
+            "percentageOfCumulativeReturn": cumulative_return
         }
         
         # Insert the document

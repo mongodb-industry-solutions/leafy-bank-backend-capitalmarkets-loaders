@@ -35,19 +35,19 @@ steps:
       namespace: industrysolutions
       release: capitalmarkets-loaders
       values:
-        - "image.tag=git-${DRONE_COMMIT_SHA:0:7}"
-        - "image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/industrysolutions/capitalmarkets-loaders"
-        - "ingress.enabled=true"
-        - "ingress.hosts[0]=capitalmarkets-loaders.industrysolutions.staging.corp.mongodb.com"
-        - "mesh.enabled=true"
-        - "resources.limits.cpu=500m"
-        - "resources.limits.memory=768Mi"
-        - "resources.requests.cpu=200m"
-        - "resources.requests.memory=512Mi"
+        - 'image.tag=git-${DRONE_COMMIT_SHA:0:7}'
+        - 'image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/industrysolutions/capitalmarkets-loaders'
+        - 'ingress.enabled=true'
+        - 'ingress.hosts[0]=capitalmarkets-loaders.industrysolutions.staging.corp.mongodb.com'
+        - 'mesh.enabled=true'
+        - 'resources.limits.cpu=500m'
+        - 'resources.limits.memory=768Mi'
+        - 'resources.requests.cpu=200m'
+        - 'resources.requests.memory=512Mi'
       api_server: https://api.staging.corp.mongodb.com
       kubernetes_token:
         from_secret: staging_kubernetes_token
-      values_files: [ "environments/staging.yaml" ]
+      values_files: ['environments/staging.yaml']
     when:
       event:
         - push
@@ -66,7 +66,7 @@ steps:
     settings:
       create_repository: true
       registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-      repo: industrysolutions/capitalmarkets-loaders
+      repo: industrysolutions/capitalmarkets-loaders-bian
       tags:
         - git-${DRONE_COMMIT_SHA:0:7}
         - latest
@@ -86,21 +86,21 @@ steps:
       chart_version: 4.25.0
       add_repos: [mongodb=https://10gen.github.io/helm-charts]
       namespace: industrysolutions
-      release: capitalmarkets-loaders
+      release: capitalmarkets-loaders-bian-prod
       values:
-        - "image.tag=git-${DRONE_COMMIT_SHA:0:7}"
-        - "image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/industrysolutions/capitalmarkets-loaders"
-        - "ingress.enabled=true"
-        - "ingress.hosts[0]=capitalmarkets-loaders.industrysolutions.prod.corp.mongodb.com"
-        - "mesh.enabled=true"
-        - "resources.limits.cpu=500m"
-        - "resources.limits.memory=1536Mi"
-        - "resources.requests.cpu=200m"
-        - "resources.requests.memory=1024Mi"
+        - 'image.tag=git-${DRONE_COMMIT_SHA:0:7}'
+        - 'image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/industrysolutions/capitalmarkets-loaders-bian'
+        - 'ingress.enabled=true'
+        - 'ingress.hosts[0]=capitalmarkets-loaders-bian.industrysolutions.prod.corp.mongodb.com'
+        - 'mesh.enabled=true'
+        - 'resources.limits.cpu=500m'
+        - 'resources.limits.memory=1536Mi'
+        - 'resources.requests.cpu=200m'
+        - 'resources.requests.memory=1024Mi'
       api_server: https://api.prod.corp.mongodb.com
       kubernetes_token:
         from_secret: prod_kubernetes_token
-      values_files: [ "environments/prod.yaml" ]
+      values_files: ['environments/prod.yaml']
     when:
       event:
         - push
